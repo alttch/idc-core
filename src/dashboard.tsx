@@ -1,0 +1,1031 @@
+import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { Rulers } from "./rulers";
+import { Sidebar } from "./sidebar";
+import ArrowDropUpOutlinedIcon from "@mui/icons-material/ArrowDropUpOutlined";
+import ArrowDropDownOutlinedIcon from "@mui/icons-material/ArrowDropDownOutlined";
+import ArrowLeftOutlinedIcon from "@mui/icons-material/ArrowLeftOutlined";
+import ArrowRightOutlinedIcon from "@mui/icons-material/ArrowRightOutlined";
+import {
+  DEFAULT_GRID,
+  DEFAULT_NAME,
+  DEFAULT_VIEWPORT,
+  MIN_SIDEBAR_WIDTH,
+  OnlineState
+} from "./common";
+import { clearSelection, Coords, getMouseEventCoords } from "bmat/dom";
+import {
+  DElement,
+  DElementData,
+  DisplayElements,
+  ElementClass,
+  ElementPack,
+  ElementPool
+} from "./elements";
+import { Box, Dialog, DialogContent, DialogTitle } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import { TextareaAutosize } from "@mui/base/TextareaAutosize";
+import { get_engine } from "@eva-ics/webengine-react";
+import { ActionResult, Eva, EvaError } from "@eva-ics/webengine";
+import ModalDialog from "./components/modal/ModalDialog.tsx";
+import CustomButton from "./components/buttons/custom_button.tsx";
+
+export interface DashboardData {
+  name: string;
+  viewport: Coords;
+  state_updates: Array<string>;
+  grid: number;
+  elements: Array<DElementData>;
+}
+
+const isBodyKeyEvent = (e: any): boolean => {
+  return (
+    e.target.nodeName === "BODY" ||
+    (e.target.nodeName === "INPUT" &&
+      e.target.classList?.contains("eva") &&
+      e.target.classList?.contains("button")) ||
+    (e.target.offsetParent?.classList?.contains("eva") &&
+      e.target.offsetParent?.classList?.contains("button"))
+  );
+};
+
+const DashboardSource = ({
+  data,
+  setSource
+}: {
+  data: DashboardData;
+  setSource: (data: DashboardData | null) => void;
+}) => {
+  const areaRef = useRef(null);
+  const [json_value, setJSONValue] = useState(JSON.stringify(data, null, 2));
+
+  const applySource = () => {
+    try {
+      const value = JSON.parse((areaRef.current as any).value);
+      if (!value.name) throw new Error("no dashboard name");
+      value.viewport.x = parseInt(value.viewport.x);
+      value.viewport.y = parseInt(value.viewport.y);
+      if (
+        isNaN(value.viewport.x) ||
+        isNaN(value.viewport.y) ||
+        value.viewport.x < 100 ||
+        value.viewport.y < 100
+      )
+        throw new Error("invalid viewport");
+      value.grid = parseInt(value.grid);
+      if (isNaN(value.grid) || value.grid < 1) throw new Error("invalid grid");
+      if (!Array.isArray(value.elements)) throw new Error("no elements");
+      if (!Array.isArray(value.state_updates))
+        throw new Error("no state_updates");
+      setSource(value);
+    } catch (err) {
+      alert(err);
+    }
+  };
+
+  const downloadSource = () => {
+    const element = document.createElement("a");
+    const file = new Blob([json_value], { type: "text/plain" });
+    element.href = URL.createObjectURL(file);
+    element.download = "dashboard.json";
+    document.body.appendChild(element);
+    element.click();
+  };
+
+  //Upload files
+  const handleSourceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const fileContents = event.target?.result as string;
+
+      const fileName = file.name.toLowerCase();
+      if (fileName.endsWith(".json") || fileName.endsWith(".txt")) {
+        setJSONValue(fileContents);
+      } else {
+        alert("Invalid file type. Please select a JSON or TXT file");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <Dialog open={true}>
+      <DialogTitle>Copy/paste/edit the dashboard code</DialogTitle>
+      <DialogContent>
+        <Box>
+          <TextareaAutosize
+            className="idc-source-textarea"
+            ref={areaRef}
+            cols={100}
+            value={json_value}
+            onChange={(e) => setJSONValue(e.target.value)}
+          />
+        </Box>
+        <input
+          type="file"
+          accept=".json, .txt"
+          onChange={handleSourceUpload}
+          style={{ display: "none" }}
+          id="file-input"
+        />
+      </DialogContent>
+      <Box
+        sx={{
+          padding: "10px",
+          display: "flex",
+          justifyContent: "space-between"
+        }}
+      >
+        <CustomButton
+          className="idc-btn idc-btn-outlined-no-icon"
+          onClick={() => applySource()}
+        >
+          Apply
+        </CustomButton>
+        <CustomButton
+          className="idc-btn idc-btn-outlined-no-icon"
+          onClick={() => setSource(null)}
+        >
+          Cancel
+        </CustomButton>
+        <CustomButton
+          className="idc-btn idc-btn-outlined-no-icon"
+          onClick={() => downloadSource()}
+        >
+          Download
+        </CustomButton>
+        <CustomButton
+          className="idc-btn idc-btn-outlined-no-icon"
+          onClick={() => {
+            (areaRef.current as any).select();
+            document.execCommand("copy");
+          }}
+        >
+          Copy
+        </CustomButton>
+        <CustomButton
+          className="idc-btn idc-btn-outlined-no-icon clear"
+          onClick={() => ((areaRef.current as any).value = "")}
+        >
+          Clear
+        </CustomButton>
+        <label
+          className="idc-btn idc-btn-outlined-no-icon"
+          htmlFor="file-input"
+        >
+          <span>Upload</span>
+        </label>
+      </Box>
+    </Dialog>
+  );
+};
+
+export const DashboardViewer = ({
+  session_id,
+  data,
+  element_pack,
+  finish,
+  body_color,
+  onActionSuccess,
+  onActionFail
+}: {
+  session_id: string;
+  data: DashboardData;
+  element_pack: ElementPack;
+  finish?: () => void;
+  body_color: string;
+  onActionSuccess: (result: ActionResult) => void;
+  onActionFail: (err: EvaError) => void;
+}) => {
+  const engine = useMemo(() => get_engine() as Eva, []);
+  const [active, setActive] = useState(false);
+  const pool = useMemo(() => {
+    let pool = new ElementPool(element_pack);
+    pool.import(data.elements);
+    return pool;
+  }, [session_id]);
+
+  const updateEngineStates = () => {
+    engine.set_state_updates(data.state_updates, true).then(() => {
+      setActive(true);
+    });
+  };
+
+  useEffect(() => {
+    const prev_body_color = document.body.style.backgroundColor;
+    setActive(false);
+    updateEngineStates();
+    document.body.style.backgroundColor = body_color;
+    return () => {
+      document.body.style.backgroundColor = prev_body_color;
+    };
+  }, [session_id]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: any) => {
+      if (isBodyKeyEvent(e)) {
+        //setHelpVisible(false);
+        switch (e.code) {
+          case "KeyQ":
+            if (e.shiftKey && !e.altKey) {
+              if (finish) {
+                e.preventDefault();
+                finish();
+              }
+            }
+            break;
+          default:
+            break;
+        }
+      }
+    };
+    document.body.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  if (active) {
+    return (
+      <div className="idc-dashboard-viewer-container">
+        <div className="idc-dashboard-viewport-container">
+          <div
+            className="idc-viewer-viewport"
+            style={{
+              width: data.viewport.x,
+              height: data.viewport.y
+            }}
+          >
+            <DisplayElements
+              element_pool={pool}
+              editor_mode={false}
+              onActionSuccess={onActionSuccess}
+              onActionFail={onActionFail}
+              cur_offset={{ x: 0, y: 0 }}
+            />
+          </div>
+        </div>
+        <div
+          className="idc-dashboard-viewer-close-button"
+          onClick={() => {
+            if (finish) finish();
+          }}
+        >
+          <CloseIcon />
+        </div>
+      </div>
+    );
+  } else {
+    return <div className="idc-dashboard-loading">Loading...</div>;
+  }
+};
+
+export const DashboardEditor = ({
+  session_id,
+  offsetX,
+  offsetY,
+  element_pack,
+  data,
+  save,
+  finish,
+  onSuccess,
+  onError,
+  ignore_modified
+}: {
+  session_id: string;
+  offsetX: number;
+  offsetY: number;
+  element_pack: ElementPack;
+  data?: DashboardData;
+  save?: (data: DashboardData) => Promise<boolean>;
+  finish?: () => void;
+  onSuccess: (message: any) => void;
+  onError: (message: any) => void;
+  ignore_modified?: boolean;
+}) => {
+  const name = useRef(DEFAULT_NAME);
+  const viewport = useRef(DEFAULT_VIEWPORT);
+  const grid = useRef(DEFAULT_GRID);
+  const state_updates = useRef<Array<string>>([]);
+  const cur_offset = useRef<Coords>({ x: 0, y: 0 });
+  const [sidebar_dragged, setSidebarDragged] = useState(false);
+  const [sidebar_width, setSidebarWidth] = useState(
+    Math.min(window.innerWidth, 390)
+  );
+  const [, forceUpdate] = useReducer((x) => x + 1, 0);
+  const [isShowModal, setIsShowModal] = useState(false);
+  const [last_click, setLastClick] = useState<Date>(new Date());
+  const element_pool = useMemo(() => {
+    let pool = new ElementPool(element_pack);
+    if (data) {
+      pool.import(data.elements);
+    }
+    return pool;
+  }, [session_id]);
+  const engine = useMemo(() => get_engine() as Eva, []);
+
+  // keep as useRef to make dragging faster!
+  const last_mouse_coords = useRef({ x: 0, y: 0 });
+  // keep as useRef to let global key bindings work
+  const sidebar_visible = useRef(true);
+  const help_visible = useRef(false);
+  const source_visible = useRef(false);
+  const viewport_scrolled = useRef(false);
+  const scrolling_enabled = useRef(false);
+
+  const modified = useRef(false);
+
+  const setModified = () => {
+    modified.current = true;
+  };
+
+  const [online, setOnline] = useState(OnlineState.Working);
+
+  const updateEngineStates = () => {
+    setOnline(OnlineState.Working);
+    engine.set_state_updates(state_updates.current, true).then(() => {
+      setOnline(
+        state_updates.current.length > 0
+          ? OnlineState.Online
+          : OnlineState.Offline
+      );
+    });
+  };
+
+  const setStateUpdates = (val: Array<string>) => {
+    state_updates.current = val;
+    updateEngineStates();
+    forceUpdate();
+  };
+
+  const setName = (val: string) => {
+    name.current = val;
+    forceUpdate();
+  };
+
+  const setViewport = (val: Coords) => {
+    viewport.current = val;
+    forceUpdate();
+  };
+
+  const setGrid = (val: number) => {
+    grid.current = val;
+    forceUpdate();
+  };
+
+  const setCurOffset = (val: Coords) => {
+    cur_offset.current = val;
+    forceUpdate();
+  };
+
+  const setScrollingEnabled = (val: boolean) => {
+    scrolling_enabled.current = val;
+    forceUpdate();
+  };
+
+  useEffect(() => {
+    if (data) {
+      setName(data.name);
+      setViewport(data.viewport);
+      setStateUpdates(data.state_updates);
+      setGrid(data.grid);
+      element_pool.import(data.elements);
+    } else {
+      setName(DEFAULT_NAME);
+      setViewport(DEFAULT_VIEWPORT);
+      setGrid(DEFAULT_GRID);
+      setStateUpdates([]);
+      element_pool.clear();
+    }
+  }, [session_id]);
+
+  const setSelectedElement = (el?: DElement) => {
+    element_pool.set_selected(el);
+    forceUpdate();
+  };
+
+  const setDraggedElement = (el?: DElement) => {
+    element_pool.set_dragged(el);
+    forceUpdate();
+  };
+
+  const setHelpVisible = (visible: boolean) => {
+    help_visible.current = visible;
+    forceUpdate();
+  };
+
+  const setViewportScrolled = (scrolled: boolean) => {
+    viewport_scrolled.current = scrolled;
+    forceUpdate();
+  };
+
+  const setSidebarVisible = (visible: boolean) => {
+    sidebar_visible.current = visible;
+    forceUpdate();
+  };
+
+  const toggleSideBar = () => {
+    setSidebarVisible(!sidebar_visible.current);
+  };
+
+  const setLastMouseCoords = (coords: Coords) => {
+    last_mouse_coords.current = coords;
+  };
+
+  const handleClose = () => {
+    setIsShowModal(false);
+  };
+
+  const addElement = (
+    kind: string,
+    pos?: Coords,
+    set_selected?: boolean
+  ): DElement | null => {
+    const el = element_pool.add(kind, pos || { ...cur_offset.current });
+    if (el) {
+      fixPosition(el);
+      if (set_selected) {
+        setSelectedElement(el);
+      }
+      setModified();
+      return el;
+    }
+    return null;
+  };
+
+  const alignElements = () => {
+    element_pool.items.map((el) => {
+      fixPosition(el);
+    });
+    setModified();
+    forceUpdate();
+  };
+
+  const copySelectedElement = () => {
+    if (element_pool.selected_element) {
+      const el = addElement(element_pool.selected_element.kind);
+      if (el) {
+        el.params = JSON.parse(
+          JSON.stringify(element_pool.selected_element.params)
+        );
+        setSelectedElement(el);
+        setModified();
+      }
+    }
+  };
+
+  const deleteSelectedElement = () => {
+    if (element_pool.selected_element) {
+      element_pool.delete(element_pool.selected_element.id);
+      setModified();
+    }
+    setSelectedElement();
+  };
+
+  const deleteAllElements = () => {
+    if (element_pool.items.length > 0) {
+      setModified();
+    }
+    element_pool.clear();
+    setSelectedElement();
+    onSuccess("dashboard cleared");
+  };
+
+  const exportData = (): DashboardData => {
+    const data: DashboardData = {
+      name: name.current,
+      viewport: viewport.current,
+      grid: grid.current,
+      state_updates: state_updates.current,
+      elements: element_pool.export()
+    };
+    return data;
+  };
+
+  const showSource = () => {
+    source_visible.current = true;
+    forceUpdate();
+  };
+
+  const hideSource = () => {
+    source_visible.current = false;
+    forceUpdate();
+  };
+
+  const calculateX = (val: number): number => {
+    return val - offsetX + cur_offset.current.x;
+  };
+
+  const calculateY = (val: number): number => {
+    return val - offsetY + cur_offset.current.y;
+  };
+
+  const fixPosition = (el: DElement, align_to_grid = true) => {
+    const el_class = element_pool.pack.classes.get(el.kind) as ElementClass;
+    if (el.position.x + el_class.default_size.x > viewport.current.x) {
+      el.position.x = viewport.current.x - el_class.default_size.x;
+    }
+    if (el.position.y + el_class.default_size.y > viewport.current.y) {
+      el.position.y = viewport.current.y - el_class.default_size.y;
+    }
+    if (el.position.x < 0) el.position.x = 0;
+    if (el.position.y < 0) el.position.y = 0;
+    if (align_to_grid) {
+      el.position.x = Math.round(el.position.x / grid.current) * grid.current;
+      el.position.y = Math.round(el.position.y / grid.current) * grid.current;
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (element_pool.dragged_element) {
+      fixPosition(element_pool.dragged_element);
+    }
+    setDraggedElement();
+    setSidebarDragged(false);
+    setViewportScrolled(false);
+  };
+
+  const handleMouseMove = (e: any) => {
+    if (element_pool.dragged_element) {
+      const coords = getMouseEventCoords(e);
+      const delta_x = last_mouse_coords.current.x - coords.x;
+      const delta_y = last_mouse_coords.current.y - coords.y;
+      element_pool.dragged_element.position.x -= delta_x;
+      element_pool.dragged_element.position.y -= delta_y;
+      fixPosition(element_pool.dragged_element, false);
+      setModified();
+      setLastMouseCoords(coords);
+      forceUpdate();
+    } else if (sidebar_dragged) {
+      let width = sidebar_width;
+      const coords = getMouseEventCoords(e);
+      const delta_x = last_mouse_coords.current.x - coords.x;
+      width += delta_x;
+      setLastMouseCoords(coords);
+      if (width < MIN_SIDEBAR_WIDTH) {
+        width = MIN_SIDEBAR_WIDTH;
+      }
+      if (width > e.view.innerWidth) {
+        width = e.view.innerWidth;
+      }
+      clearSelection();
+      setSidebarWidth(width);
+    } else if (viewport_scrolled.current) {
+      const coords = getMouseEventCoords(e);
+      const delta_x = last_mouse_coords.current.x - coords.x;
+      const delta_y = last_mouse_coords.current.y - coords.y;
+      const cur = {
+        x: cur_offset.current.x + delta_x,
+        y: cur_offset.current.y + delta_y
+      };
+      if (cur.x < 0) cur.x = 0;
+      if (cur.y < 0) cur.y = 0;
+      if (cur.x > viewport.current.x - 100) cur.x = viewport.current.x - 100;
+      if (cur.y > viewport.current.y - 100) cur.y = viewport.current.y - 100;
+      setCurOffset(cur);
+      setLastMouseCoords(coords);
+    } else {
+      const coords = getMouseEventCoords(e);
+      setLastMouseCoords(coords);
+    }
+  };
+
+  const handleMouseDown = (e: any) => {
+    try {
+      const now: Date = new Date();
+      if (e.target.className.indexOf("idc-editor-viewport") != -1) {
+        const coords = getMouseEventCoords(e);
+        setLastMouseCoords(coords);
+        setSelectedElement();
+        setHelpVisible(false);
+        if (now.getTime() - last_click.getTime() < 300 && !e.touches) {
+          setSidebarVisible(true);
+        } else {
+          if (scrolling_enabled.current) {
+            setViewportScrolled(true);
+          }
+          if (
+            viewport.current.x + sidebar_width - cur_offset.current.x >=
+            window.innerWidth
+          ) {
+            setSidebarVisible(false);
+          }
+        }
+      }
+      if (!e.touches) {
+        setLastClick(now);
+      }
+    } catch (e) {}
+  };
+
+  let saveDashboard: () => Promise<boolean> | undefined = undefined as any;
+  if (save) {
+    saveDashboard = async () => {
+      const result = await save(exportData());
+      if (result) {
+        modified.current = false;
+      }
+      return result;
+    };
+  }
+
+  let finishDashboard: () => void | undefined = undefined as any;
+  if (finish) {
+    finishDashboard = () => {
+      if (modified.current && !ignore_modified) {
+        setIsShowModal(true);
+      } else {
+        finish();
+        modified.current = false;
+      }
+    };
+  }
+
+  useEffect(() => {
+    const handleKeyDown = (e: any) => {
+      if (isBodyKeyEvent(e)) {
+        setHelpVisible(false);
+        switch (e.code) {
+          case "Home":
+            e.preventDefault();
+            setCurOffset({ x: 0, y: 0 });
+            break;
+          case "Backquote":
+            e.preventDefault();
+            toggleSideBar();
+            forceUpdate();
+            break;
+          case "KeyC":
+            if (!e.shiftKey && !e.altKey) {
+              e.preventDefault();
+              copySelectedElement();
+            }
+            break;
+          case "KeyX":
+            if (!e.shiftKey && !e.altKey) {
+              e.preventDefault();
+              showSource();
+            }
+            break;
+          case "KeyH":
+            if (!e.shiftKey && !e.altKey) {
+              e.preventDefault();
+              setHelpVisible(true);
+            }
+            break;
+          case "KeyL":
+            if (!e.shiftKey && !e.altKey) {
+              e.preventDefault();
+              setScrollingEnabled(!scrolling_enabled.current);
+            }
+            break;
+          case "KeyS":
+            if (!e.altKey) {
+              if (saveDashboard) {
+                e.preventDefault();
+                saveDashboard()?.then((result) => {
+                  if (e.shiftKey && result) finishDashboard();
+                });
+              }
+            }
+            break;
+          case "KeyQ":
+            if (e.shiftKey && !e.altKey) {
+              if (finishDashboard) {
+                e.preventDefault();
+                finishDashboard();
+              }
+            }
+            break;
+          case "Delete":
+            if (!e.shiftKey && !e.altKey) {
+              e.preventDefault();
+              deleteSelectedElement();
+            }
+            break;
+          default:
+            break;
+        }
+      }
+    };
+    document.body.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [session_id]);
+
+  let help_box;
+  if (help_visible.current) {
+    help_box = (
+      <HelpBox
+        save_allowed={save !== undefined}
+        finish_allowed={finish !== undefined}
+      />
+    );
+  }
+
+  const handleMouseDownEl = (e: any, element: DElement) => {
+    setLastMouseCoords(getMouseEventCoords(e));
+    setDraggedElement(element);
+    setSelectedElement(element);
+    setHelpVisible(false);
+  };
+
+  const setSource = (data: DashboardData | null) => {
+    if (data) {
+      setName(data.name);
+      setViewport(data.viewport);
+      setStateUpdates(data.state_updates);
+      setGrid(data.grid);
+      element_pool.import(data.elements);
+      setModified();
+      onSuccess("dashboard source set");
+    }
+    setSelectedElement();
+    setDraggedElement();
+    hideSource();
+  };
+
+  if (source_visible.current) {
+    return <DashboardSource data={exportData()} setSource={setSource} />;
+  }
+
+  const cur_offset_aligned = {
+    x: Math.floor(cur_offset.current.x / grid.current) * grid.current,
+    y: Math.floor(cur_offset.current.y / grid.current) * grid.current
+  };
+
+  return (
+    <div
+      className="idc-dashboard-container"
+      onMouseUp={handleMouseUp}
+      onMouseMove={handleMouseMove}
+      onTouchEnd={handleMouseUp}
+      onTouchMove={handleMouseMove}
+      onTouchStart={handleMouseDown}
+    >
+      <Sidebar
+        element_pool={element_pool}
+        visible={sidebar_visible.current}
+        width={sidebar_width}
+        viewport={viewport.current}
+        setViewport={setViewport}
+        grid={grid.current}
+        setGrid={setGrid}
+        cur_offset={cur_offset_aligned}
+        setCurOffset={setCurOffset}
+        scrolling_enabled={scrolling_enabled.current}
+        setScrollingEnabled={setScrollingEnabled}
+        name={name.current}
+        online={online}
+        setName={setName}
+        forceUpdate={forceUpdate}
+        addElement={addElement}
+        setDragged={setSidebarDragged}
+        setVisible={setSidebarVisible}
+        setLastMouseCoords={setLastMouseCoords}
+        alignElements={alignElements}
+        copySelectedElement={copySelectedElement}
+        deleteSelectedElement={deleteSelectedElement}
+        deleteAllElements={deleteAllElements}
+        showSource={showSource}
+        save={saveDashboard}
+        finish={finishDashboard}
+        state_updates={state_updates.current}
+        setStateUpdates={setStateUpdates}
+        onError={onError}
+        setModified={setModified}
+      />
+      {help_box}
+      <div className="idc-dashboard-viewport-container">
+        <div
+          className="idc-editor-viewport"
+          style={{
+            width: viewport.current.x - cur_offset_aligned.x,
+            height: viewport.current.y - cur_offset_aligned.y,
+            backgroundSize: `${grid.current}px ${grid.current}px`,
+            cursor: scrolling_enabled.current ? "grab" : "auto"
+          }}
+          onMouseDown={handleMouseDown}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            const k = e.dataTransfer.getData("new-element");
+            if (k) {
+              const pos: Coords = {
+                x: calculateX(e.pageX),
+                y: calculateY(e.pageY)
+              };
+              const el = addElement(k, pos);
+              if (el) {
+                setSelectedElement(el);
+              }
+            }
+          }}
+        >
+          <ScrollHelpers
+            viewport_scrolled={viewport_scrolled.current}
+            cur_offset={cur_offset_aligned}
+            viewport={viewport.current}
+          />
+          <Rulers
+            el={element_pool.dragged_element}
+            cur_offset={cur_offset_aligned}
+          />
+          <DisplayElements
+            element_pool={element_pool}
+            onMouseDown={handleMouseDownEl}
+            setSidebarVisible={setSidebarVisible}
+            editor_mode={true}
+            cur_offset={cur_offset_aligned}
+            viewport_scrolled={viewport_scrolled.current}
+          />
+        </div>
+      </div>
+      <ModalDialog
+        open={isShowModal}
+        onClose={handleClose}
+        title="Dashboard has been modified. Exit editor?"
+        onClick={() => {
+          if (finish) {
+            finish();
+            modified.current = false;
+          }
+        }}
+      />
+    </div>
+  );
+};
+
+const HelpBox = ({
+  save_allowed,
+  finish_allowed
+}: {
+  save_allowed: boolean;
+  finish_allowed: boolean;
+}): JSX.Element => {
+  let save_help;
+  if (save_allowed) {
+    save_help = (
+      <tr>
+        <td>[s]</td>
+        <td>save dashboard</td>
+      </tr>
+    );
+  }
+
+  let save_finish_help;
+  if (finish_allowed) {
+    save_finish_help = (
+      <tr>
+        <td>[Shift+Q]</td>
+        <td>exit editor</td>
+      </tr>
+    );
+  }
+
+  let save_plus_finish_help;
+  if (save_allowed && finish_allowed) {
+    save_plus_finish_help = (
+      <tr>
+        <td>[Shift+S]</td>
+        <td>save and exit editor</td>
+      </tr>
+    );
+  }
+
+  return (
+    <div className="idc-editor-help">
+      <table className="idc-editor-help-table">
+        <tbody>
+          <tr>
+            <td>[h]</td>
+            <td>this help</td>
+          </tr>
+          <tr>
+            <td>[c]</td>
+            <td>copy selected element</td>
+          </tr>
+          <tr>
+            <td>[Del]</td>
+            <td>delete selected element</td>
+          </tr>
+          <tr>
+            <td>[x]</td>
+            <td>show source window</td>
+          </tr>
+          <tr>
+            <td>[l]</td>
+            <td>Enable/disable scrolling</td>
+          </tr>
+          <tr>
+            <td>[Home]</td>
+            <td>Scroll home</td>
+          </tr>
+          {save_help}
+          {save_plus_finish_help}
+          {save_finish_help}
+          <tr>
+            <td>[`]</td>
+            <td>toggle side bar</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const ScrollHelpers = ({
+  viewport_scrolled,
+  cur_offset,
+  viewport
+}: {
+  viewport_scrolled: boolean;
+  cur_offset: Coords;
+  viewport: Coords;
+}) => {
+  return (
+    <>
+      {viewport_scrolled ? (
+        <div
+          className="idc-viewport-scrolled-val"
+          style={{
+            width: Math.min(viewport.x - cur_offset.x, window.innerWidth),
+            height: Math.min(viewport.y - cur_offset.y, window.innerHeight)
+          }}
+        >
+          <div className="idc-viewport-scrolled-val-inner">
+            X: {cur_offset.x} Y: {cur_offset.y}
+          </div>
+        </div>
+      ) : null}
+      {cur_offset.x > 0 ? (
+        <div
+          className="idc-scroll-helper idc-scroll-helper-x"
+          style={{
+            height: Math.min(viewport.y - cur_offset.y, window.innerHeight)
+          }}
+        >
+          <div className="idc-scroll-helper-x-inner">
+            <div>
+              <ArrowLeftOutlinedIcon fontSize="small" />
+            </div>
+            <div>
+              <ArrowLeftOutlinedIcon fontSize="small" />
+            </div>
+            <div>
+              <ArrowLeftOutlinedIcon fontSize="small" />
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {cur_offset.y > 0 ? (
+        <div
+          className="idc-scroll-helper idc-scroll-helper-y"
+          style={{
+            width: Math.min(viewport.x - cur_offset.x, window.innerWidth)
+          }}
+        >
+          <ArrowDropUpOutlinedIcon fontSize="small" />
+          <ArrowDropUpOutlinedIcon fontSize="small" />
+          <ArrowDropUpOutlinedIcon fontSize="small" />
+        </div>
+      ) : null}
+      {viewport.x - cur_offset.x > window.innerWidth ? (
+        <div
+          className="idc-scroll-helper idc-scroll-helper-x-right"
+          style={{
+            height: Math.min(viewport.y - cur_offset.y, window.innerHeight)
+          }}
+        >
+          <div className="idc-scroll-helper-x-inner">
+            <div>
+              <ArrowRightOutlinedIcon fontSize="small" />
+            </div>
+            <div>
+              <ArrowRightOutlinedIcon fontSize="small" />
+            </div>
+            <div>
+              <ArrowRightOutlinedIcon fontSize="small" />
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {viewport.y - cur_offset.y > window.innerHeight ? (
+        <div
+          className="idc-scroll-helper idc-scroll-helper-y-down"
+          style={{
+            width: Math.min(viewport.x - cur_offset.x, window.innerWidth)
+          }}
+        >
+          <ArrowDropDownOutlinedIcon fontSize="small" />
+          <ArrowDropDownOutlinedIcon fontSize="small" />
+          <ArrowDropDownOutlinedIcon fontSize="small" />
+        </div>
+      ) : null}
+    </>
+  );
+};

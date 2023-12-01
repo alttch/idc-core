@@ -1,0 +1,46 @@
+.idc-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: normal;
+  min-width: 80px;
+  max-width: 120px;
+  background-color: transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: 0.3s;
+
+  @include media(desktop){
+    &:hover{
+      transform: scale(0.96);
+      transition: 0.3s;
+    }
+  }
+
+}
+
+.idc-btn-outlined{
+  border: 1px solid var(--idc-decorator-color);
+  color: var(--idc-heading-color);
+}
+
+.idc-btn-outlined-no-icon{
+  border: 1px solid var(--idc-decorator-color);
+  color: var(--idc-heading-color);
+  padding: 7px ;
+
+  &.clear{
+    border: 1px solid var(--idc-btn-reset-color);
+    color: var(--idc-btn-reset-color);
+  }
+}
+
+.idc-btn-delete{
+  border: 1px solid var(--idc-btn-reset-color);
+  color: var(--idc-btn-reset-color);
+}

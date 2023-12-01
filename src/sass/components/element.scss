@@ -1,0 +1,60 @@
+.idc-element-unsupported {
+  width: 200px;
+  height: 80px;
+  background-color: #220000;
+  color: white;
+  font-weight: bold;
+  text-align: center;
+  padding: 20px;
+}
+
+.idc-element-icon {
+  width: 24px;
+}
+
+.idc-element {
+  cursor: pointer;
+  width: max-content;
+  position: absolute;
+}
+
+.idc-element-view {
+  width: max-content;
+  position: absolute;
+}
+
+.idc-element-selected {
+  border: 2px dotted #777;
+}
+
+.idc-element-dragged {
+  cursor: move;
+  user-select: none;
+}
+
+.idc-element-box {
+  position: relative;
+  z-index: 5;
+}
+
+.idc-ruler {
+  position: absolute;
+  z-index: 999;
+}
+
+.idc-ruler-x {
+  border-bottom: 1px solid #336699;
+  width: 100%;
+}
+
+.idc-ruler-y {
+  border-right: 1px solid #336699;
+  height: 100%;
+}
+
+.idc-ruler-legend {
+  color: #336699;
+  font-size: 12px;
+  white-space: nowrap;
+  user-select: none;
+}
