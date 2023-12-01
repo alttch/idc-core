@@ -1,6 +1,6 @@
 {
   "name": "idc-core",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "type": "module",
   "description": "Interactive dashboard creator core",
   "scripts": {
@@ -21,6 +21,12 @@
       "require": "./dist/idc-core.umd.js"
     }
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alttch/idc-core"
+  },
+  "author": "Bohemia Automation",
+  "license": "Apache-2.0",
   "peerDependencies": {
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
