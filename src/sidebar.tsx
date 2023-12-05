@@ -570,7 +570,10 @@ const GlobalsBar = ({
                   <EditNumber
                     element_id={`${session_id}-scale`}
                     current_value={scale}
-                    setParam={setScale}
+                    setParam={(val: number) => {
+                      setScale(val);
+                      setModified();
+                    }}
                     step={0.1}
                     params={{ min: 0.1, float: true }}
                   />
