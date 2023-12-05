@@ -29,6 +29,8 @@ import { ActionResult, Eva, EvaError } from "@eva-ics/webengine";
 import ModalDialog from "./components/modal/ModalDialog.tsx";
 import CustomButton from "./components/buttons/custom_button.tsx";
 
+const DASHBOARD_MODIFIED_CONFIRM = "Dashboard has been modified. Exit editor?";
+
 export interface DashboardData {
   name: string;
   viewport: Coords;
@@ -47,6 +49,15 @@ const isBodyKeyEvent = (e: any): boolean => {
     (e.target.offsetParent?.classList?.contains("eva") &&
       e.target.offsetParent?.classList?.contains("button"))
   );
+};
+
+const handleOutEvent = (e: any, modified: boolean) => {
+  if (modified) {
+    if (!confirm(DASHBOARD_MODIFIED_CONFIRM)) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  }
 };
 
 const DashboardSource = ({
@@ -332,7 +343,7 @@ export const DashboardEditor = ({
     Math.min(window.innerWidth, 390)
   );
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
-  const [isShowModal, setIsShowModal] = useState(false);
+  const [isShowModalExit, setIsShowModalExit] = useState(false);
   const [last_click, setLastClick] = useState<Date>(new Date());
   const element_pool = useMemo(() => {
     let pool = new ElementPool(element_pack);
@@ -408,6 +419,16 @@ export const DashboardEditor = ({
   };
 
   useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      handleOutEvent(e, modified.current && !ignore_modified);
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [session_id]);
+
+  useEffect(() => {
     if (data) {
       setName(data.name);
       setViewport(data.viewport);
@@ -460,7 +481,7 @@ export const DashboardEditor = ({
   };
 
   const handleClose = () => {
-    setIsShowModal(false);
+    setIsShowModalExit(false);
   };
 
   const addElement = (
@@ -661,7 +682,7 @@ export const DashboardEditor = ({
   if (finish) {
     finishDashboard = () => {
       if (modified.current && !ignore_modified) {
-        setIsShowModal(true);
+        setIsShowModalExit(true);
       } else {
         finish();
         modified.current = false;
@@ -683,10 +704,17 @@ export const DashboardEditor = ({
             toggleSideBar();
             forceUpdate();
             break;
-          case "KeyC":
-            if (!e.shiftKey && !e.altKey) {
-              e.preventDefault();
-              copySelectedElement();
+          case "Backspace":
+            handleOutEvent(e, modified.current && !ignore_modified);
+            break;
+          case "ArrowLeft":
+            if (e.altKey) {
+              handleOutEvent(e, modified.current && !ignore_modified);
+            }
+            break;
+          case "ArrowRight":
+            if (e.altKey) {
+              handleOutEvent(e, modified.current && !ignore_modified);
             }
             break;
           case "KeyX":
@@ -878,9 +906,9 @@ export const DashboardEditor = ({
         </div>
       </div>
       <ModalDialog
-        open={isShowModal}
+        open={isShowModalExit}
         onClose={handleClose}
-        title="Dashboard has been modified. Exit editor?"
+        title={DASHBOARD_MODIFIED_CONFIRM}
         onClick={() => {
           if (finish) {
             finish();
