@@ -32,6 +32,7 @@ import CustomButton from "./components/buttons/custom_button.tsx";
 export interface DashboardData {
   name: string;
   viewport: Coords;
+  scale: number;
   state_updates: Array<string>;
   grid: number;
   elements: Array<DElementData>;
@@ -217,9 +218,22 @@ export const DashboardViewer = ({
     const prev_body_color = document.body.style.backgroundColor;
     setActive(false);
     updateEngineStates();
+    const viewport = document.querySelector("meta[name=viewport]");
     document.body.style.backgroundColor = body_color;
+    if (viewport && data.scale) {
+      viewport.setAttribute(
+        "content",
+        `width=device-width, initial-scale=${data.scale}`
+      );
+    }
     return () => {
       document.body.style.backgroundColor = prev_body_color;
+      if (viewport) {
+        viewport.setAttribute(
+          "content",
+          "width=device-width, initial-scale=1.0"
+        );
+      }
     };
   }, [session_id]);
 
@@ -306,8 +320,10 @@ export const DashboardEditor = ({
   onError: (message: any) => void;
   ignore_modified?: boolean;
 }) => {
+  const [loaded, setLoaded] = useState(false);
   const name = useRef(DEFAULT_NAME);
   const viewport = useRef(DEFAULT_VIEWPORT);
+  const scale = useRef(1);
   const grid = useRef(DEFAULT_GRID);
   const state_updates = useRef<Array<string>>([]);
   const cur_offset = useRef<Coords>({ x: 0, y: 0 });
@@ -371,6 +387,11 @@ export const DashboardEditor = ({
     forceUpdate();
   };
 
+  const setScale = (val: number) => {
+    scale.current = val;
+    forceUpdate();
+  };
+
   const setGrid = (val: number) => {
     grid.current = val;
     forceUpdate();
@@ -390,16 +411,19 @@ export const DashboardEditor = ({
     if (data) {
       setName(data.name);
       setViewport(data.viewport);
+      setScale(data.scale);
       setStateUpdates(data.state_updates);
       setGrid(data.grid);
       element_pool.import(data.elements);
     } else {
       setName(DEFAULT_NAME);
       setViewport(DEFAULT_VIEWPORT);
+      setScale(1);
       setGrid(DEFAULT_GRID);
       setStateUpdates([]);
       element_pool.clear();
     }
+    setLoaded(true);
   }, [session_id]);
 
   const setSelectedElement = (el?: DElement) => {
@@ -498,6 +522,7 @@ export const DashboardEditor = ({
     const data: DashboardData = {
       name: name.current,
       viewport: viewport.current,
+      scale: scale.current,
       grid: grid.current,
       state_updates: state_updates.current,
       elements: element_pool.export()
@@ -759,6 +784,10 @@ export const DashboardEditor = ({
     y: Math.floor(cur_offset.current.y / grid.current) * grid.current
   };
 
+  if (!loaded) {
+    return;
+  }
+
   return (
     <div
       className="idc-dashboard-container"
@@ -769,11 +798,14 @@ export const DashboardEditor = ({
       onTouchStart={handleMouseDown}
     >
       <Sidebar
+        session_id={session_id}
         element_pool={element_pool}
         visible={sidebar_visible.current}
         width={sidebar_width}
         viewport={viewport.current}
         setViewport={setViewport}
+        scale={scale.current}
+        setScale={setScale}
         grid={grid.current}
         setGrid={setGrid}
         cur_offset={cur_offset_aligned}

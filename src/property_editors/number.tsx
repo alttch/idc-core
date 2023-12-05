@@ -9,12 +9,14 @@ export const EditNumber = ({
   update_key,
   current_value,
   setParam,
+  step,
   params
 }: {
   element_id: string;
   update_key?: any;
   current_value: number;
   setParam: (a: any) => void;
+  step?: number;
   params?: any;
 }): JSX.Element => {
   const [input_value, setInputValue] = useState(
@@ -36,6 +38,9 @@ export const EditNumber = ({
           type="number"
           value={input_value}
           variant="standard"
+          inputProps={{
+            step: step
+          }}
           onChange={(e) => {
             try {
               const value = e.target.value;

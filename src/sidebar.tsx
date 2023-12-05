@@ -51,11 +51,14 @@ const SUBSCRIBE_OIDS_HELP = (
 );
 
 export const Sidebar = ({
+  session_id,
   element_pool,
   visible,
   width,
   viewport,
   setViewport,
+  scale,
+  setScale,
   grid,
   setGrid,
   cur_offset,
@@ -82,11 +85,14 @@ export const Sidebar = ({
   onError,
   setModified
 }: {
+  session_id: string;
   element_pool: ElementPool;
   visible: boolean;
   width: number;
   viewport: Coords;
   setViewport: (val: Coords) => void;
+  scale: number;
+  setScale: (val: number) => void;
   grid: number;
   setGrid: (val: number) => void;
   cur_offset: Coords;
@@ -161,8 +167,11 @@ export const Sidebar = ({
           forceUpdate={forceUpdate}
         />
         <GlobalsBar
+          session_id={session_id}
           viewport={viewport}
           setViewport={setViewport}
+          scale={scale}
+          setScale={setScale}
           grid={grid}
           setGrid={setGrid}
           cur_offset={cur_offset}
@@ -366,8 +375,11 @@ const ElementPropsBar = ({
 };
 
 const GlobalsBar = ({
+  session_id,
   viewport,
   setViewport,
+  scale,
+  setScale,
   grid,
   setGrid,
   cur_offset,
@@ -386,8 +398,11 @@ const GlobalsBar = ({
   setStateUpdates,
   setModified
 }: {
+  session_id: string;
   viewport: Coords;
   setViewport: (val: Coords) => void;
+  scale: number;
+  setScale: (val: number) => void;
   grid: number;
   setGrid: (val: number) => void;
   cur_offset: Coords;
@@ -544,6 +559,20 @@ const GlobalsBar = ({
                     current_value={viewport.y}
                     setParam={setViewportY}
                     params={DIMENSIONS}
+                  />
+                </td>
+              </tr>
+              <tr className="idc-editor-sidebar-row">
+                <td className="editor-sidebar-param-name idc-editor-sidebar-col">
+                  Scale
+                </td>
+                <td className="idc-dashboard-editor-viewport">
+                  <EditNumber
+                    element_id={`${session_id}-scale`}
+                    current_value={scale}
+                    setParam={setScale}
+                    step={0.1}
+                    params={{ min: 0.1, float: true }}
                   />
                 </td>
               </tr>
