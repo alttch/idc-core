@@ -409,8 +409,10 @@ export const DashboardEditor = ({
   };
 
   const setCurOffset = (val: Coords) => {
-    cur_offset.current = val;
-    forceUpdate();
+    if (val.x >= 0 && val.y >= 0) {
+      cur_offset.current = val;
+      forceUpdate();
+    }
   };
 
   const setScrollingEnabled = (val: boolean) => {
@@ -710,11 +712,65 @@ export const DashboardEditor = ({
           case "ArrowLeft":
             if (e.altKey) {
               handleOutEvent(e, modified.current && !ignore_modified);
+            } else if (!e.shiftKey) {
+              if (element_pool.selected_element) {
+                element_pool.selected_element.position.x -= grid.current;
+                setModified();
+                fixPosition(element_pool.selected_element, true);
+                forceUpdate();
+              }
+            } else {
+              setCurOffset({
+                x: cur_offset.current.x + grid.current,
+                y: cur_offset.current.y
+              });
             }
             break;
           case "ArrowRight":
             if (e.altKey) {
               handleOutEvent(e, modified.current && !ignore_modified);
+            } else if (!e.shiftKey) {
+              if (element_pool.selected_element) {
+                element_pool.selected_element.position.x += grid.current;
+                setModified();
+                fixPosition(element_pool.selected_element, true);
+                forceUpdate();
+              }
+            } else {
+              setCurOffset({
+                x: cur_offset.current.x - grid.current,
+                y: cur_offset.current.y
+              });
+            }
+            break;
+          case "ArrowUp":
+            if (!e.shiftKey) {
+              if (element_pool.selected_element) {
+                element_pool.selected_element.position.y -= grid.current;
+                setModified();
+                fixPosition(element_pool.selected_element, true);
+                forceUpdate();
+              }
+            } else {
+              setCurOffset({
+                x: cur_offset.current.x,
+                y: cur_offset.current.y + grid.current
+              });
+            }
+            break;
+          case "ArrowDown":
+            if (!e.shiftKey) {
+              if (element_pool.selected_element) {
+                element_pool.selected_element.position.y += grid.current;
+                setModified();
+                fixPosition(element_pool.selected_element, true);
+                forceUpdate();
+              }
+            } else {
+              setCurOffset({
+                x: cur_offset.current.x,
+                y: cur_offset.current.y - grid.current
+              });
             }
             break;
           case "KeyX":
@@ -980,6 +1036,14 @@ const HelpBox = ({
           <tr>
             <td>[l]</td>
             <td>Enable/disable scrolling</td>
+          </tr>
+          <tr>
+            <td>[Arrow keys]</td>
+            <td>Move selected element</td>
+          </tr>
+          <tr>
+            <td>[Shift+Arrow keys]</td>
+            <td>Scroll viewport</td>
           </tr>
           <tr>
             <td>[Home]</td>
