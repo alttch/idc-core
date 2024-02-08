@@ -2,6 +2,7 @@ import { EditNumber } from "./property_editors/number";
 import { EditSelectNumber } from "./property_editors/select_number";
 import { EditNumberSlider } from "./property_editors/select_number_slider";
 import { EditString } from "./property_editors/string";
+import { EditFormula } from "./property_editors/formula";
 import { EditStringList } from "./property_editors/string_list";
 import { EditSelectDatabase } from "./property_editors/select_database";
 import { EditSelectServerOID } from "./property_editors/select_server_oid";
@@ -24,6 +25,7 @@ export enum PropertyKind {
   SelectNumber = "select_number",
   SelectNumberSlider = "select_number_slider",
   String = "string",
+  Formula = "formula",
   StringList = "string_list",
   SelectString = "select_string",
   SelectDatabase = "select_database",
@@ -60,6 +62,9 @@ export const PropertyEditor = ({
       break;
     case PropertyKind.String:
       editor = <EditString {...props} />;
+      break;
+    case PropertyKind.Formula:
+      editor = <EditFormula {...props} />;
       break;
     case PropertyKind.StringList:
       editor = <EditStringList {...props} />;
