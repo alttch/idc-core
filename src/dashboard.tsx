@@ -809,6 +809,12 @@ export const DashboardEditor = ({
               }
             }
             break;
+          case "KeyC":
+            if (!e.shiftKey && !e.altKey) {
+              e.preventDefault();
+              copySelectedElement();
+            }
+            break;
           case "Delete":
             if (!e.shiftKey && !e.altKey) {
               e.preventDefault();
