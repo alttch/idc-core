@@ -25,13 +25,7 @@ export default defineConfig({
         "react",
         "react-dom",
         "uuid"
-      ],
-      onwarn(warning, warn) {
-        if (warning.code === "MODULE_LEVEL_DIRECTIVE") {
-          return;
-        }
-        warn(warning);
-      }
+      ]
     },
     lib: {
       entry: "./src/lib.mts",
