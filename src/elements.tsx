@@ -121,9 +121,9 @@ export const DisplayElements = ({
   return (
     <>
       {element_pool.items.map((el, i) => {
-        const element_class = element_pool.pack.classes.get(
-          el.kind
-        ) as ElementClass;
+        const element_class = element_pool.pack.classes.get(el.kind) as
+          | ElementClass
+          | undefined;
         let css_class;
         const dragged = el.id == element_pool.dragged_element?.id;
         if (editor_mode) {
@@ -135,7 +135,7 @@ export const DisplayElements = ({
           css_class = "idc-element-view";
         }
         const params = { ...el.params };
-        if (element_class.actions) {
+        if (element_class?.actions) {
           if (editor_mode) {
             params.disabled_actions = true;
           } else {
@@ -153,7 +153,7 @@ export const DisplayElements = ({
             />
           </>
         );
-        if (element_class.boxed) {
+        if (element_class?.boxed) {
           el_view = <div className="idc-element-box">{el_view}</div>;
         }
         return (

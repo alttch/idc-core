@@ -572,12 +572,14 @@ export const DashboardEditor = ({
   };
 
   const fixPosition = (el: DElement, align_to_grid = true) => {
-    const el_class = element_pool.pack.classes.get(el.kind) as ElementClass;
-    if (el.position.x + el_class.default_size.x > viewport.current.x) {
-      el.position.x = viewport.current.x - el_class.default_size.x;
+    const el_class = element_pool.pack.classes.get(el.kind) as
+      | ElementClass
+      | undefined;
+    if (el.position.x + (el_class?.default_size?.x || 0) > viewport.current.x) {
+      el.position.x = viewport.current.x - (el_class?.default_size?.x || 0);
     }
-    if (el.position.y + el_class.default_size.y > viewport.current.y) {
-      el.position.y = viewport.current.y - el_class.default_size.y;
+    if (el.position.y + (el_class?.default_size?.y || 0) > viewport.current.y) {
+      el.position.y = viewport.current.y - (el_class?.default_size?.y || 0);
     }
     if (el.position.x < 0) el.position.x = 0;
     if (el.position.y < 0) el.position.y = 0;
