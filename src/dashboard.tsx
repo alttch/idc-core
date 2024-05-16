@@ -201,7 +201,8 @@ export const DashboardViewer = ({
   finish,
   body_color,
   onActionSuccess,
-  onActionFail
+  onActionFail,
+  no_state_updates
 }: {
   session_id: string;
   data: DashboardData;
@@ -210,6 +211,7 @@ export const DashboardViewer = ({
   body_color: string;
   onActionSuccess: (result: ActionResult) => void;
   onActionFail: (err: EvaError) => void;
+  no_state_updates?: boolean;
 }) => {
   const engine = useMemo(() => get_engine() as Eva, []);
   const [active, setActive] = useState(false);
@@ -220,6 +222,10 @@ export const DashboardViewer = ({
   }, [session_id]);
 
   const updateEngineStates = () => {
+    if (no_state_updates) {
+      setActive(true);
+      return;
+    }
     engine.set_state_updates(data.state_updates, true).then(() => {
       setActive(true);
     });
@@ -318,7 +324,8 @@ export const DashboardEditor = ({
   finish,
   onSuccess,
   onError,
-  ignore_modified
+  ignore_modified,
+  no_state_updates
 }: {
   session_id: string;
   offsetX: number;
@@ -330,6 +337,7 @@ export const DashboardEditor = ({
   onSuccess: (message: any) => void;
   onError: (message: any) => void;
   ignore_modified?: boolean;
+  no_state_updates?: boolean;
 }) => {
   const [loaded, setLoaded] = useState(false);
   const name = useRef(DEFAULT_NAME);
@@ -372,6 +380,10 @@ export const DashboardEditor = ({
   const [online, setOnline] = useState(OnlineState.Working);
 
   const updateEngineStates = () => {
+    if (no_state_updates) {
+      setOnline(OnlineState.Online);
+      return;
+    }
     setOnline(OnlineState.Working);
     engine.set_state_updates(state_updates.current, true).then(() => {
       setOnline(
@@ -920,6 +932,7 @@ export const DashboardEditor = ({
         save={saveDashboard}
         finish={finishDashboard}
         state_updates={state_updates.current}
+        no_state_updates={no_state_updates || false}
         setStateUpdates={setStateUpdates}
         onError={onError}
         setModified={setModified}

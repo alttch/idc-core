@@ -81,6 +81,7 @@ export const Sidebar = ({
   save,
   finish,
   state_updates,
+  no_state_updates,
   setStateUpdates,
   onError,
   setModified
@@ -115,6 +116,7 @@ export const Sidebar = ({
   save?: () => Promise<boolean> | undefined;
   finish?: () => void;
   state_updates: Array<string>;
+  no_state_updates: boolean;
   setStateUpdates: (val: Array<string>) => void;
   onError: (message: any) => void;
   setModified: () => void;
@@ -187,6 +189,7 @@ export const Sidebar = ({
           save={save}
           finish={finish}
           state_updates={state_updates}
+          no_state_updates={no_state_updates}
           setStateUpdates={setStateUpdates}
           setModified={setModified}
         />
@@ -395,6 +398,7 @@ const GlobalsBar = ({
   save,
   finish,
   state_updates,
+  no_state_updates,
   setStateUpdates,
   setModified
 }: {
@@ -418,6 +422,7 @@ const GlobalsBar = ({
   save?: () => Promise<boolean> | undefined;
   finish?: () => void;
   state_updates: Array<string>;
+  no_state_updates: boolean;
   setStateUpdates: (val: Array<string>) => void;
   setModified: () => void;
 }) => {
@@ -524,24 +529,26 @@ const GlobalsBar = ({
                 </td>
                 <td className={`idc-editor-status-${online}`}>
                   {online}
-                  <EditStringList
-                    element_id={"global"}
-                    current_value={state_updates}
-                    setParam={(...params) => {
-                      setModified();
-                      setStateUpdates(...params);
-                    }}
-                    params={{
-                      title: "Subscribed OIDs/OID masks",
-                      help: SUBSCRIBE_OIDS_HELP,
-                      extra_buttons: [
-                        {
-                          value: "Subscribe ALL",
-                          onClick: () => ["#"]
-                        }
-                      ]
-                    }}
-                  />
+                  {no_state_updates ? null : (
+                    <EditStringList
+                      element_id={"global"}
+                      current_value={state_updates}
+                      setParam={(...params) => {
+                        setModified();
+                        setStateUpdates(...params);
+                      }}
+                      params={{
+                        title: "Subscribed OIDs/OID masks",
+                        help: SUBSCRIBE_OIDS_HELP,
+                        extra_buttons: [
+                          {
+                            value: "Subscribe ALL",
+                            onClick: () => ["#"]
+                          }
+                        ]
+                      }}
+                    />
+                  )}
                 </td>
               </tr>
               <tr className="idc-editor-sidebar-row">
