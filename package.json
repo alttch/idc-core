@@ -1,6 +1,6 @@
 {
   "name": "idc-core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Interactive dashboard creator core",
   "scripts": {
@@ -30,8 +30,8 @@
   "peerDependencies": {
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
-    "@eva-ics/webengine": "^0.7.0",
-    "@eva-ics/webengine-react": "^0.3.2",
+    "@eva-ics/webengine": "^0.8.2",
+    "@eva-ics/webengine-react": "^0.4.2",
     "@mui/icons-material": "^5.14.11",
     "@mui/material": "^5.14.11",
     "mui-color-input": "^2.0.0",
