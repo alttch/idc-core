@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Coords } from "bmat/dom";
 import { EvaError, ActionResult } from "@eva-ics/webengine";
 import { useDoubleTap } from "./hooks/useDoubleTap.tsx";
-import { Property } from "./properties";
+import { Property, PropertyKind } from "./properties";
 
 export interface ElementClass {
   description: string;
@@ -38,6 +38,28 @@ export class ElementPool {
     this.pack = pack;
     this.selected_element = undefined;
     this.dragged_element = undefined;
+  }
+
+  oids_to_subscribe(): Array<string> {
+    const oids_to_subscribe: Set<string> = new Set();
+    this.items.forEach((el) => {
+      Object.entries(el.params).forEach(([key, value]) => {
+        let c = this.pack.classes.get(el.kind);
+        if (c?.props) {
+          for (const prop of c.props) {
+            if (prop.name === key) {
+              if (prop.kind === PropertyKind.OIDSubscribed) {
+                if (typeof value === "string") {
+                  oids_to_subscribe.add(value);
+                }
+              }
+            }
+            break;
+          }
+        }
+      });
+    });
+    return Array.from(oids_to_subscribe);
   }
 
   add(kind: string, pos?: Coords): DElement {

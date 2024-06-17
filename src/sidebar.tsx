@@ -1,9 +1,8 @@
 import { Dispatch, SetStateAction, useMemo, useState } from "react";
 import { EditNumber } from "./property_editors/number";
 import { EditString } from "./property_editors/string";
-import { EditStringList } from "./property_editors/string_list";
 import { EditSelectNumber } from "./property_editors/select_number";
-import { DIMENSIONS, GRIDS, OnlineState } from "./common";
+import { DIMENSIONS, GRIDS } from "./common";
 import { ElementPool } from "./elements";
 import { PropertyEditor } from "./properties";
 import {
@@ -33,23 +32,6 @@ import MenuItem from "@mui/material/MenuItem";
 import ModalDialog from "./components/modal/ModalDialog.tsx";
 import { Coords, getMouseEventCoords } from "bmat/dom";
 
-const SUBSCRIBE_OIDS_HELP = (
-  <>
-    <div>Enter OIDs/OID masks to subscribe.</div>
-    <div>
-      See{" "}
-      <a
-        className="idc-help-link"
-        href="https://info.bma.ai/en/actual/eva4/items.html#oid"
-        target="_blank"
-      >
-        EVA ICS v4 OID
-      </a>{" "}
-      for more info.
-    </div>
-  </>
-);
-
 export const Sidebar = ({
   session_id,
   element_pool,
@@ -66,7 +48,6 @@ export const Sidebar = ({
   scrolling_enabled,
   setScrollingEnabled,
   name,
-  online,
   setName,
   forceUpdate,
   addElement,
@@ -80,9 +61,7 @@ export const Sidebar = ({
   showSource,
   save,
   finish,
-  state_updates,
-  no_state_updates,
-  setStateUpdates,
+  notifySubscribedOIDsChanged,
   onError,
   setModified
 }: {
@@ -101,7 +80,6 @@ export const Sidebar = ({
   scrolling_enabled: boolean;
   setScrollingEnabled: (val: boolean) => void;
   name: string;
-  online: OnlineState;
   setName: (val: string) => void;
   forceUpdate: () => void;
   addElement: (kind: string, pos: Coords) => void;
@@ -115,9 +93,7 @@ export const Sidebar = ({
   showSource: () => void;
   save?: () => Promise<boolean> | undefined;
   finish?: () => void;
-  state_updates: Array<string>;
-  no_state_updates: boolean;
-  setStateUpdates: (val: Array<string>) => void;
+  notifySubscribedOIDsChanged: () => void;
   onError: (message: any) => void;
   setModified: () => void;
 }) => {
@@ -161,6 +137,7 @@ export const Sidebar = ({
           viewport={viewport}
           onError={onError}
           setModified={setModified}
+          notifySubscribedOIDsChanged={notifySubscribedOIDsChanged}
         />
         <ElementsBar
           element_pool={element_pool}
@@ -181,16 +158,12 @@ export const Sidebar = ({
           scrolling_enabled={scrolling_enabled}
           setScrollingEnabled={setScrollingEnabled}
           name={name}
-          online={online}
           setName={setName}
           alignElements={alignElements}
           deleteAllElements={deleteAllElements}
           showSource={showSource}
           save={save}
           finish={finish}
-          state_updates={state_updates}
-          no_state_updates={no_state_updates}
-          setStateUpdates={setStateUpdates}
           setModified={setModified}
         />
       </div>
@@ -248,7 +221,8 @@ const ElementPropsBar = ({
   deleteSelectedElement,
   viewport,
   onError,
-  setModified
+  setModified,
+  notifySubscribedOIDsChanged
 }: {
   element_pool: ElementPool;
   forceUpdate: () => void;
@@ -258,6 +232,7 @@ const ElementPropsBar = ({
   viewport: Coords;
   onError: (message: any) => void;
   setModified: () => void;
+  notifySubscribedOIDsChanged: () => void;
 }) => {
   const el = element_pool.selected_element;
   if (!el) return <></>;
@@ -357,6 +332,9 @@ const ElementPropsBar = ({
                                 setParam={setParam}
                                 params={v.params}
                                 setErrorMessage={setErrorMessage}
+                                notifySubscribedOIDsChanged={
+                                  notifySubscribedOIDsChanged
+                                }
                               />
                             </td>
                           </tr>
@@ -390,16 +368,12 @@ const GlobalsBar = ({
   scrolling_enabled,
   setScrollingEnabled,
   name,
-  online,
   setName,
   alignElements,
   deleteAllElements,
   showSource,
   save,
   finish,
-  state_updates,
-  no_state_updates,
-  setStateUpdates,
   setModified
 }: {
   session_id: string;
@@ -414,16 +388,12 @@ const GlobalsBar = ({
   scrolling_enabled: boolean;
   setScrollingEnabled: (val: boolean) => void;
   name: string;
-  online: OnlineState;
   setName: (val: string) => void;
   alignElements: () => void;
   deleteAllElements: () => void;
   showSource: () => void;
   save?: () => Promise<boolean> | undefined;
   finish?: () => void;
-  state_updates: Array<string>;
-  no_state_updates: boolean;
-  setStateUpdates: (val: Array<string>) => void;
   setModified: () => void;
 }) => {
   const [isShowModal, setIsShowModal] = useState(false);
@@ -521,34 +491,6 @@ const GlobalsBar = ({
                       Clear
                     </CustomButton>
                   </div>
-                </td>
-              </tr>
-              <tr className="idc-editor-sidebar-row">
-                <td className="idc-editor-sidebar-param-name idc-editor-sidebar-col">
-                  Status
-                </td>
-                <td className={`idc-editor-status-${online}`}>
-                  {online}
-                  {no_state_updates ? null : (
-                    <EditStringList
-                      element_id={"global"}
-                      current_value={state_updates}
-                      setParam={(...params) => {
-                        setModified();
-                        setStateUpdates(...params);
-                      }}
-                      params={{
-                        title: "Subscribed OIDs/OID masks",
-                        help: SUBSCRIBE_OIDS_HELP,
-                        extra_buttons: [
-                          {
-                            value: "Subscribe ALL",
-                            onClick: () => ["#"]
-                          }
-                        ]
-                      }}
-                    />
-                  )}
                 </td>
               </tr>
               <tr className="idc-editor-sidebar-row">

@@ -9,8 +9,7 @@ import {
   DEFAULT_GRID,
   DEFAULT_NAME,
   DEFAULT_VIEWPORT,
-  MIN_SIDEBAR_WIDTH,
-  OnlineState
+  MIN_SIDEBAR_WIDTH
 } from "./common";
 import { clearSelection, Coords, getMouseEventCoords } from "bmat/dom";
 import {
@@ -24,8 +23,8 @@ import {
 import { Box, Dialog, DialogContent, DialogTitle } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { TextareaAutosize } from "@mui/base/TextareaAutosize";
-import { get_engine } from "@eva-ics/webengine-react";
-import { ActionResult, Eva, EvaError } from "@eva-ics/webengine";
+import { ActionResult, EvaError } from "@eva-ics/webengine";
+import { useEvaStateBlock } from "@eva-ics/webengine-react";
 import ModalDialog from "./components/modal/ModalDialog.tsx";
 import CustomButton from "./components/buttons/custom_button.tsx";
 
@@ -35,7 +34,6 @@ export interface DashboardData {
   name: string;
   viewport: Coords;
   scale: number;
-  state_updates: Array<string>;
   grid: number;
   elements: Array<DElementData>;
 }
@@ -86,8 +84,6 @@ const DashboardSource = ({
       value.grid = parseInt(value.grid);
       if (isNaN(value.grid) || value.grid < 1) throw new Error("invalid grid");
       if (!Array.isArray(value.elements)) throw new Error("no elements");
-      if (!Array.isArray(value.state_updates))
-        throw new Error("no state_updates");
       setSource(value);
     } catch (err) {
       alert(err);
@@ -201,8 +197,7 @@ export const DashboardViewer = ({
   finish,
   body_color,
   onActionSuccess,
-  onActionFail,
-  no_state_updates
+  onActionFail
 }: {
   session_id: string;
   data: DashboardData;
@@ -211,30 +206,26 @@ export const DashboardViewer = ({
   body_color: string;
   onActionSuccess: (result: ActionResult) => void;
   onActionFail: (err: EvaError) => void;
-  no_state_updates?: boolean;
 }) => {
-  const engine = useMemo(() => get_engine() as Eva, []);
-  const [active, setActive] = useState(false);
   const pool = useMemo(() => {
     let pool = new ElementPool(element_pack);
     pool.import(data.elements);
     return pool;
   }, [session_id]);
 
-  const updateEngineStates = () => {
-    if (no_state_updates) {
-      setActive(true);
-      return;
-    }
-    engine.set_state_updates(data.state_updates, true).then(() => {
-      setActive(true);
-    });
-  };
+  const oids_to_subscribe = useMemo(() => {
+    const oids = pool.oids_to_subscribe();
+    console.log(oids);
+    return oids;
+  }, [pool]);
+
+  useEvaStateBlock(
+    { name: `idc-${session_id}`, state_updates: oids_to_subscribe },
+    [oids_to_subscribe]
+  );
 
   useEffect(() => {
     const prev_body_color = document.body.style.backgroundColor;
-    setActive(false);
-    updateEngineStates();
     const viewport = document.querySelector("meta[name=viewport]");
     document.body.style.backgroundColor = body_color;
     if (viewport && data.scale) {
@@ -279,7 +270,8 @@ export const DashboardViewer = ({
     };
   }, []);
 
-  if (active) {
+  if (true) {
+    // TODO state block active/offline
     return (
       <div className="idc-dashboard-viewer-container">
         <div className="idc-dashboard-viewport-container">
@@ -324,8 +316,7 @@ export const DashboardEditor = ({
   finish,
   onSuccess,
   onError,
-  ignore_modified,
-  no_state_updates
+  ignore_modified
 }: {
   session_id: string;
   offsetX: number;
@@ -337,20 +328,19 @@ export const DashboardEditor = ({
   onSuccess: (message: any) => void;
   onError: (message: any) => void;
   ignore_modified?: boolean;
-  no_state_updates?: boolean;
 }) => {
   const [loaded, setLoaded] = useState(false);
   const name = useRef(DEFAULT_NAME);
   const viewport = useRef(DEFAULT_VIEWPORT);
   const scale = useRef(1);
   const grid = useRef(DEFAULT_GRID);
-  const state_updates = useRef<Array<string>>([]);
   const cur_offset = useRef<Coords>({ x: 0, y: 0 });
   const [sidebar_dragged, setSidebarDragged] = useState(false);
   const [sidebar_width, setSidebarWidth] = useState(
     Math.min(window.innerWidth, 390)
   );
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
+  const [resOids, resubscribeOids] = useReducer((x) => x + 1, 0);
   const [isShowModalExit, setIsShowModalExit] = useState(false);
   const [last_click, setLastClick] = useState<Date>(new Date());
   const element_pool = useMemo(() => {
@@ -360,8 +350,6 @@ export const DashboardEditor = ({
     }
     return pool;
   }, [session_id]);
-  const engine = useMemo(() => get_engine() as Eva, []);
-
   // keep as useRef to make dragging faster!
   const last_mouse_coords = useRef({ x: 0, y: 0 });
   // keep as useRef to let global key bindings work
@@ -371,33 +359,25 @@ export const DashboardEditor = ({
   const viewport_scrolled = useRef(false);
   const scrolling_enabled = useRef(false);
 
+  const oids_to_subscribe = useMemo(() => {
+    const oids = element_pool.oids_to_subscribe();
+    console.log(oids);
+    return oids;
+  }, [element_pool, resOids]);
+
+  useEvaStateBlock(
+    { name: `idc-${session_id}`, state_updates: oids_to_subscribe },
+    [oids_to_subscribe]
+  );
+
   const modified = useRef(false);
 
   const setModified = () => {
     modified.current = true;
   };
 
-  const [online, setOnline] = useState(OnlineState.Working);
-
-  const updateEngineStates = () => {
-    if (no_state_updates) {
-      setOnline(OnlineState.Online);
-      return;
-    }
-    setOnline(OnlineState.Working);
-    engine.set_state_updates(state_updates.current, true).then(() => {
-      setOnline(
-        state_updates.current.length > 0
-          ? OnlineState.Online
-          : OnlineState.Offline
-      );
-    });
-  };
-
-  const setStateUpdates = (val: Array<string>) => {
-    state_updates.current = val;
-    updateEngineStates();
-    forceUpdate();
+  const notifySubscribedOIDsChanged = () => {
+    resubscribeOids();
   };
 
   const setName = (val: string) => {
@@ -447,7 +427,6 @@ export const DashboardEditor = ({
       setName(data.name);
       setViewport(data.viewport);
       setScale(data.scale);
-      setStateUpdates(data.state_updates);
       setGrid(data.grid);
       element_pool.import(data.elements);
     } else {
@@ -455,7 +434,6 @@ export const DashboardEditor = ({
       setViewport(DEFAULT_VIEWPORT);
       setScale(1);
       setGrid(DEFAULT_GRID);
-      setStateUpdates([]);
       element_pool.clear();
     }
     setLoaded(true);
@@ -542,6 +520,7 @@ export const DashboardEditor = ({
       setModified();
     }
     setSelectedElement();
+    notifySubscribedOIDsChanged();
   };
 
   const deleteAllElements = () => {
@@ -550,6 +529,7 @@ export const DashboardEditor = ({
     }
     element_pool.clear();
     setSelectedElement();
+    notifySubscribedOIDsChanged();
     onSuccess("dashboard cleared");
   };
 
@@ -559,7 +539,6 @@ export const DashboardEditor = ({
       viewport: viewport.current,
       scale: scale.current,
       grid: grid.current,
-      state_updates: state_updates.current,
       elements: element_pool.export()
     };
     return data;
@@ -868,7 +847,6 @@ export const DashboardEditor = ({
     if (data) {
       setName(data.name);
       setViewport(data.viewport);
-      setStateUpdates(data.state_updates);
       setGrid(data.grid);
       element_pool.import(data.elements);
       setModified();
@@ -876,6 +854,7 @@ export const DashboardEditor = ({
     }
     setSelectedElement();
     setDraggedElement();
+    notifySubscribedOIDsChanged();
     hideSource();
   };
 
@@ -917,7 +896,6 @@ export const DashboardEditor = ({
         scrolling_enabled={scrolling_enabled.current}
         setScrollingEnabled={setScrollingEnabled}
         name={name.current}
-        online={online}
         setName={setName}
         forceUpdate={forceUpdate}
         addElement={addElement}
@@ -931,9 +909,7 @@ export const DashboardEditor = ({
         showSource={showSource}
         save={saveDashboard}
         finish={finishDashboard}
-        state_updates={state_updates.current}
-        no_state_updates={no_state_updates || false}
-        setStateUpdates={setStateUpdates}
+        notifySubscribedOIDsChanged={notifySubscribedOIDsChanged}
         onError={onError}
         setModified={setModified}
       />

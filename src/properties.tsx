@@ -33,14 +33,17 @@ export enum PropertyKind {
   SelectColor = "select_color",
   Boolean = "boolean",
   OID = "oid",
+  OIDSubscribed = "oid_subscribed",
   ValueMap = "value_map"
 }
 
 export const PropertyEditor = ({
   kind,
+  notifySubscribedOIDsChanged,
   ...props
 }: {
   kind: PropertyKind;
+  notifySubscribedOIDsChanged: () => void;
   element_id: string;
   update_key?: any;
   current_value: any;
@@ -80,6 +83,11 @@ export const PropertyEditor = ({
       break;
     case PropertyKind.OID:
       editor = <EditOID {...props} />;
+      break;
+    case PropertyKind.OIDSubscribed:
+      editor = (
+        <EditOID notifyGlobalChange={notifySubscribedOIDsChanged} {...props} />
+      );
       break;
     case PropertyKind.SelectDatabase:
       editor = <EditSelectDatabase {...props} />;
