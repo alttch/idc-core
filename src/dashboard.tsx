@@ -215,7 +215,6 @@ export const DashboardViewer = ({
 
   const oids_to_subscribe = useMemo(() => {
     const oids = pool.oids_to_subscribe();
-    console.log(oids);
     return oids;
   }, [pool]);
 
@@ -361,7 +360,6 @@ export const DashboardEditor = ({
 
   const oids_to_subscribe = useMemo(() => {
     const oids = element_pool.oids_to_subscribe();
-    console.log(oids);
     return oids;
   }, [element_pool, resOids]);
 
