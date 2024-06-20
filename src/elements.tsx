@@ -53,8 +53,8 @@ export class ElementPool {
                   oids_to_subscribe.add(value);
                 }
               }
+              break;
             }
-            break;
           }
         }
       });
