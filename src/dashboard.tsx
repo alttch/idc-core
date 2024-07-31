@@ -36,6 +36,8 @@ export interface DashboardData {
   scale: number;
   grid: number;
   elements: Array<DElementData>;
+  // the custom_data field can be set externally, the editor passes it as-is
+  custom_data?: any;
 }
 
 const isBodyKeyEvent = (e: any): boolean => {
@@ -330,6 +332,7 @@ export const DashboardEditor = ({
 }) => {
   const [loaded, setLoaded] = useState(false);
   const name = useRef(DEFAULT_NAME);
+  const customData = useRef<any>(null);
   const viewport = useRef(DEFAULT_VIEWPORT);
   const scale = useRef(1);
   const grid = useRef(DEFAULT_GRID);
@@ -426,6 +429,7 @@ export const DashboardEditor = ({
       setViewport(data.viewport);
       setScale(data.scale);
       setGrid(data.grid);
+      customData.current = data?.custom_data || null;
       element_pool.import(data.elements);
     } else {
       setName(DEFAULT_NAME);
@@ -537,7 +541,8 @@ export const DashboardEditor = ({
       viewport: viewport.current,
       scale: scale.current,
       grid: grid.current,
-      elements: element_pool.export()
+      elements: element_pool.export(),
+      custom_data: customData.current
     };
     return data;
   };
@@ -847,6 +852,7 @@ export const DashboardEditor = ({
       setViewport(data.viewport);
       setGrid(data.grid);
       element_pool.import(data.elements);
+      customData.current = data?.custom_data || null;
       setModified();
       onSuccess("dashboard source set");
     }
