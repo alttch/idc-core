@@ -1,6 +1,6 @@
 {
   "name": "idc-core",
-  "version": "0.3.3",
+  "version": "0.5.0",
   "type": "module",
   "description": "Interactive dashboard creator core",
   "scripts": {
@@ -30,15 +30,16 @@
   "peerDependencies": {
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
-    "@eva-ics/webengine": "^0.8.2",
-    "@eva-ics/webengine-react": "^0.4.2",
+    "@eva-ics/webengine": "^0.9.0",
+    "@eva-ics/webengine-react": "^0.5.0",
     "@mui/icons-material": "^5.14.11",
     "@mui/material": "^5.14.11",
+    "@mui/base": "^5.0.0-beta.40",
+    "bmat": "^0.1.15",
     "mui-color-input": "^2.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "uuid": "^9.0.1",
-    "bmat": "^0.1.15"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@types/react": "^18.0.37",
