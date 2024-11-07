@@ -12,6 +12,7 @@ export interface ElementClass {
   default_size: Coords;
   boxed: boolean;
   actions: boolean;
+  default_zIndex?: number;
   IconDraw?: () => JSX.Element;
 }
 
@@ -63,11 +64,14 @@ export class ElementPool {
   }
 
   add(kind: string, pos?: Coords): DElement {
+    const el_class = this.pack.classes.get(kind);
+    const zindex = el_class?.default_zIndex;
     const el: DElement = {
       id: uuidv4(),
       kind: kind,
-      params: JSON.parse(JSON.stringify(this.pack.classes.get(kind)?.defaults)),
-      position: pos || { x: 0, y: 0 }
+      params: JSON.parse(JSON.stringify(el_class?.defaults)),
+      position: pos || { x: 0, y: 0 },
+      zindex: zindex === undefined ? 10 : zindex
     };
     this.items.push(el);
     return el;
@@ -97,7 +101,8 @@ export class ElementPool {
       return {
         kind: el.kind,
         params: el.params,
-        position: el.position
+        position: el.position,
+        zindex: el.zindex
       };
     });
   }
@@ -194,7 +199,8 @@ export const DisplayElements = ({
             className={css_class}
             style={{
               left: el.position.x - cur_offset.x,
-              top: el.position.y - cur_offset.y
+              top: el.position.y - cur_offset.y,
+              zIndex: el.zindex
             }}
             {...doubleTapOpenSideBar}
           >
@@ -211,10 +217,12 @@ export interface DElement {
   kind: string;
   params: any;
   position: Coords;
+  zindex: number;
 }
 
 export interface DElementData {
   kind: string;
   params: any;
   position: Coords;
+  zindex: number;
 }

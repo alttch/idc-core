@@ -292,7 +292,7 @@ const ElementPropsBar = ({
                         setModified();
                         forceUpdate();
                       }}
-                      params={{ size: 5, min: 0, max: viewport.x }}
+                      params={{ size: 4, min: 0, max: viewport.x }}
                     />
                   </div>
                   <div className="idc-elements-parameters-wrapper__content--item">
@@ -308,13 +308,29 @@ const ElementPropsBar = ({
                         setModified();
                         forceUpdate();
                       }}
-                      params={{ size: 5, min: 0, max: viewport.y }}
+                      params={{ size: 4, min: 0, max: viewport.y }}
                     />
                   </div>
                 </div>
                 <div className="idc-elements-parameters-wrapper__content--block-editor">
                   <table className="idc-editor-elements-table">
                     <tbody>
+                      <tr>
+                        <td>z-index</td>
+                        <td>
+                          <EditNumber
+                            element_id={el.id}
+                            update_key={el.zindex}
+                            current_value={el.zindex}
+                            setParam={(z) => {
+                              el.zindex = z;
+                              setModified();
+                              forceUpdate();
+                            }}
+                            params={{ size: 3, min: 0, max: 99 }}
+                          />
+                        </td>
+                      </tr>
                       {element_class.props.map((v, k) => {
                         const setParam = (value: any) => {
                           el.params[v.name] = value;
