@@ -9,6 +9,7 @@ export interface ElementClass {
   group: string;
   defaults: object;
   props: Array<Property>;
+  vendored?: any;
   default_size: Coords;
   boxed: boolean;
   actions: boolean;
@@ -21,10 +22,12 @@ export interface ElementPack {
   Viewer: ({
     kind,
     dragged,
+    vendored,
     ...params
   }: {
     kind: string;
     dragged: boolean;
+    vendored?: any;
   }) => JSX.Element;
 }
 
@@ -176,6 +179,7 @@ export const DisplayElements = ({
             <Viewer
               kind={el.kind}
               dragged={dragged || viewport_scrolled}
+              vendored={element_class?.vendored}
               {...params}
             />
           </>
