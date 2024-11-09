@@ -34,14 +34,14 @@ export interface ElementPack {
 export class ElementPool {
   items: Array<DElement>;
   pack: ElementPack;
-  selected_element?: DElement;
-  dragged_element?: DElement;
+  selected_elements: Set<DElement>;
+  elements_dragged: boolean;
 
   constructor(pack: ElementPack) {
     this.items = [];
     this.pack = pack;
-    this.selected_element = undefined;
-    this.dragged_element = undefined;
+    this.selected_elements = new Set();
+    this.elements_dragged = false;
   }
 
   oids_to_subscribe(): Array<string> {
@@ -88,11 +88,48 @@ export class ElementPool {
   }
 
   set_selected(el?: DElement) {
-    this.selected_element = el;
+    if (el) {
+      this.selected_elements.add(el);
+    } else {
+      this.selected_elements.clear();
+    }
   }
 
-  set_dragged(el?: DElement) {
-    this.dragged_element = el;
+  toggle_selected(el: DElement) {
+    if (this.selected_elements.has(el)) {
+      this.selected_elements.delete(el);
+    } else {
+      this.selected_elements.add(el);
+    }
+  }
+
+  selection_active(): boolean {
+    return this.selected_elements.size > 0;
+  }
+
+  set_dragged(dragged: boolean) {
+    this.elements_dragged = dragged;
+  }
+
+  top_selected_element(): DElement | null {
+    if (this.selected_elements.size > 0) {
+      let top_el: DElement | undefined = undefined;
+      this.selected_elements.forEach((el) => {
+        if (!top_el) {
+          top_el = el;
+        } else if (el.position.x < top_el.position.x) {
+          top_el = el;
+        } else if (
+          el.position.x == top_el.position.x &&
+          el.position.y < top_el.position.y
+        ) {
+          top_el = el;
+        }
+      });
+      return top_el || null;
+    } else {
+      return null;
+    }
   }
 
   clear() {
@@ -124,6 +161,7 @@ export class ElementPool {
 export const DisplayElements = ({
   element_pool,
   onMouseDown,
+  onMouseUp,
   setSidebarVisible,
   editor_mode,
   onActionSuccess,
@@ -133,6 +171,7 @@ export const DisplayElements = ({
 }: {
   element_pool: ElementPool;
   onMouseDown?: (e: any, element: DElement) => void;
+  onMouseUp?: (e: any, element: DElement) => void;
   setSidebarVisible?: (visible: boolean) => void;
   editor_mode: boolean;
   onActionSuccess?: (result: ActionResult) => void;
@@ -155,11 +194,11 @@ export const DisplayElements = ({
           | ElementClass
           | undefined;
         let css_class;
-        const dragged = el.id == element_pool.dragged_element?.id;
+        const selected = element_pool.selected_elements.has(el);
+        const dragged = element_pool.elements_dragged && selected;
         if (editor_mode) {
           css_class = "idc-element";
-          if (el.id == element_pool.selected_element?.id)
-            css_class += " idc-element-selected";
+          if (selected) css_class += " idc-element-selected";
           if (dragged) css_class += " idc-element-dragged";
         } else {
           css_class = "idc-element-view";
@@ -194,9 +233,19 @@ export const DisplayElements = ({
                 onMouseDown(e, el);
               }
             }}
+            onMouseUp={(e) => {
+              if (onMouseUp) {
+                onMouseUp(e, el);
+              }
+            }}
             onTouchStart={(e) => {
               if (onMouseDown) {
                 onMouseDown(e, el);
+              }
+            }}
+            onTouchEnd={(e) => {
+              if (onMouseUp) {
+                onMouseUp(e, el);
               }
             }}
             key={key}

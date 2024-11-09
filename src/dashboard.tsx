@@ -29,6 +29,7 @@ import ModalDialog from "./components/modal/ModalDialog.tsx";
 import CustomButton from "./components/buttons/custom_button.tsx";
 
 const DASHBOARD_MODIFIED_CONFIRM = "Dashboard has been modified. Exit editor?";
+const CLICK_MS = 300;
 
 export interface DashboardData {
   name: string;
@@ -360,6 +361,7 @@ export const DashboardEditor = ({
   const source_visible = useRef(false);
   const viewport_scrolled = useRef(false);
   const scrolling_enabled = useRef(false);
+  const last_mouse_down = useRef(new Date());
 
   const oids_to_subscribe = useMemo(() => {
     const oids = element_pool.oids_to_subscribe();
@@ -446,8 +448,18 @@ export const DashboardEditor = ({
     forceUpdate();
   };
 
-  const setDraggedElement = (el?: DElement) => {
-    element_pool.set_dragged(el);
+  const toggleSelectedElement = (el: DElement) => {
+    element_pool.toggle_selected(el);
+    forceUpdate();
+  };
+
+  const setElementDragged = () => {
+    element_pool.set_dragged(true);
+    forceUpdate();
+  };
+
+  const unsetElementDragged = () => {
+    element_pool.set_dragged(false);
     forceUpdate();
   };
 
@@ -504,21 +516,27 @@ export const DashboardEditor = ({
   };
 
   const copySelectedElement = () => {
-    if (element_pool.selected_element) {
-      const el = addElement(element_pool.selected_element.kind);
+    const new_elements = new Set<DElement>();
+    element_pool.selected_elements.forEach((selected: DElement) => {
+      const el = addElement(selected.kind, {
+        x: selected.position.x + grid.current,
+        y: selected.position.y + grid.current
+      });
       if (el) {
-        el.params = JSON.parse(
-          JSON.stringify(element_pool.selected_element.params)
-        );
-        setSelectedElement(el);
+        el.params = JSON.parse(JSON.stringify(selected.params));
+        new_elements.add(el);
         setModified();
       }
-    }
+    });
+    element_pool.selected_elements = new_elements;
+    forceUpdate();
   };
 
   const deleteSelectedElement = () => {
-    if (element_pool.selected_element) {
-      element_pool.delete(element_pool.selected_element.id);
+    if (element_pool.selection_active()) {
+      element_pool.selected_elements.forEach((el: DElement) => {
+        element_pool.delete(el.id);
+      });
       setModified();
     }
     setSelectedElement();
@@ -584,22 +602,26 @@ export const DashboardEditor = ({
   };
 
   const handleMouseUp = () => {
-    if (element_pool.dragged_element) {
-      fixPosition(element_pool.dragged_element);
+    if (element_pool.elements_dragged) {
+      element_pool.selected_elements.forEach((el: DElement) => {
+        fixPosition(el);
+      });
     }
-    setDraggedElement();
     setSidebarDragged(false);
     setViewportScrolled(false);
+    unsetElementDragged();
   };
 
   const handleMouseMove = (e: any) => {
-    if (element_pool.dragged_element) {
+    if (element_pool.elements_dragged) {
       const coords = getMouseEventCoords(e);
       const delta_x = last_mouse_coords.current.x - coords.x;
       const delta_y = last_mouse_coords.current.y - coords.y;
-      element_pool.dragged_element.position.x -= delta_x;
-      element_pool.dragged_element.position.y -= delta_y;
-      fixPosition(element_pool.dragged_element, false);
+      element_pool.selected_elements.forEach((el: DElement) => {
+        el.position.x -= delta_x;
+        el.position.y -= delta_y;
+        fixPosition(el, false);
+      });
       setModified();
       setLastMouseCoords(coords);
       forceUpdate();
@@ -645,7 +667,7 @@ export const DashboardEditor = ({
         setLastMouseCoords(coords);
         setSelectedElement();
         setHelpVisible(false);
-        if (now.getTime() - last_click.getTime() < 300 && !e.touches) {
+        if (now.getTime() - last_click.getTime() < CLICK_MS && !e.touches) {
           setSidebarVisible(true);
         } else {
           if (scrolling_enabled.current) {
@@ -709,10 +731,12 @@ export const DashboardEditor = ({
             if (e.altKey) {
               handleOutEvent(e, modified.current && !ignore_modified);
             } else if (!e.shiftKey) {
-              if (element_pool.selected_element) {
-                element_pool.selected_element.position.x -= grid.current;
+              if (element_pool.selection_active()) {
+                element_pool.selected_elements.forEach((el: DElement) => {
+                  el.position.x -= grid.current;
+                  fixPosition(el, true);
+                });
                 setModified();
-                fixPosition(element_pool.selected_element, true);
                 forceUpdate();
               }
             } else {
@@ -726,10 +750,12 @@ export const DashboardEditor = ({
             if (e.altKey) {
               handleOutEvent(e, modified.current && !ignore_modified);
             } else if (!e.shiftKey) {
-              if (element_pool.selected_element) {
-                element_pool.selected_element.position.x += grid.current;
+              if (element_pool.selection_active()) {
+                element_pool.selected_elements.forEach((el: DElement) => {
+                  el.position.x += grid.current;
+                  fixPosition(el, true);
+                });
                 setModified();
-                fixPosition(element_pool.selected_element, true);
                 forceUpdate();
               }
             } else {
@@ -741,10 +767,12 @@ export const DashboardEditor = ({
             break;
           case "ArrowUp":
             if (!e.shiftKey) {
-              if (element_pool.selected_element) {
-                element_pool.selected_element.position.y -= grid.current;
+              if (element_pool.selection_active()) {
+                element_pool.selected_elements.forEach((el: DElement) => {
+                  el.position.y -= grid.current;
+                  fixPosition(el, true);
+                });
                 setModified();
-                fixPosition(element_pool.selected_element, true);
                 forceUpdate();
               }
             } else {
@@ -756,10 +784,12 @@ export const DashboardEditor = ({
             break;
           case "ArrowDown":
             if (!e.shiftKey) {
-              if (element_pool.selected_element) {
-                element_pool.selected_element.position.y += grid.current;
+              if (element_pool.selection_active()) {
+                element_pool.selected_elements.forEach((el: DElement) => {
+                  el.position.y += grid.current;
+                  fixPosition(el, true);
+                });
                 setModified();
-                fixPosition(element_pool.selected_element, true);
                 forceUpdate();
               }
             } else {
@@ -840,9 +870,23 @@ export const DashboardEditor = ({
   }
 
   const handleMouseDownEl = (e: any, element: DElement) => {
+    e.element_click = true;
+    last_mouse_down.current = new Date();
+    setHelpVisible(false);
+    if (!e.shiftKey) {
+      if (!element_pool.selected_elements.has(element)) {
+        setSelectedElement();
+        setSelectedElement(element);
+      }
+      setElementDragged();
+    }
+  };
+
+  const handleMouseUpEl = (e: any, element: DElement) => {
     setLastMouseCoords(getMouseEventCoords(e));
-    setDraggedElement(element);
-    setSelectedElement(element);
+    if (e.shiftKey) {
+      toggleSelectedElement(element);
+    }
     setHelpVisible(false);
   };
 
@@ -857,7 +901,7 @@ export const DashboardEditor = ({
       onSuccess("dashboard source set");
     }
     setSelectedElement();
-    setDraggedElement();
+    unsetElementDragged();
     notifySubscribedOIDsChanged();
     hideSource();
   };
@@ -948,13 +992,21 @@ export const DashboardEditor = ({
             cur_offset={cur_offset_aligned}
             viewport={viewport.current}
           />
-          <Rulers
-            el={element_pool.dragged_element}
-            cur_offset={cur_offset_aligned}
-          />
+          {new Date().getTime() - last_mouse_down.current.getTime() >=
+          CLICK_MS ? (
+            <Rulers
+              el={
+                element_pool.elements_dragged
+                  ? element_pool.top_selected_element()
+                  : null
+              }
+              cur_offset={cur_offset_aligned}
+            />
+          ) : null}
           <DisplayElements
             element_pool={element_pool}
             onMouseDown={handleMouseDownEl}
+            onMouseUp={handleMouseUpEl}
             setSidebarVisible={setSidebarVisible}
             editor_mode={true}
             cur_offset={cur_offset_aligned}

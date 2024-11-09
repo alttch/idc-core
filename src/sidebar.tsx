@@ -99,7 +99,7 @@ export const Sidebar = ({
 }) => {
   const [error_message, setErrorMessage] = useState<null | string>(null);
 
-  if (!element_pool.selected_element && error_message) {
+  if (!element_pool.selection_active() && error_message) {
     setErrorMessage(null);
   }
 
@@ -234,7 +234,46 @@ const ElementPropsBar = ({
   setModified: () => void;
   notifySubscribedOIDsChanged: () => void;
 }) => {
-  const el = element_pool.selected_element;
+  if (element_pool.selected_elements.size > 1) {
+    return (
+      <div className="idc-editor-sidebar-header">
+        <Accordion defaultExpanded className="idc-editor-accordion">
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            aria-controls="elements_parameters"
+            id="element_parameters_sidebar"
+          >
+            <Typography>Element parameters</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <div className="idc-elements-parameters-wrapper">
+              <div className="idc-elements-parameters-wrapper__content">
+                <div className="idc-elements-parameters-wrapper__content--block">
+                  <div className="idc-elements-parameters-wrapper__content--buttons">
+                    <CustomButton
+                      className="idc-btn idc-btn-outlined"
+                      onClick={copySelectedElement}
+                    >
+                      <CopyAllOutlined />
+                      Copy
+                    </CustomButton>
+                    <CustomButton
+                      className="idc-btn idc-btn-delete"
+                      onClick={deleteSelectedElement}
+                    >
+                      <DeleteOutline />
+                      Delete
+                    </CustomButton>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </AccordionDetails>
+        </Accordion>
+      </div>
+    );
+  }
+  const el = element_pool.selected_elements.values().next().value;
   if (!el) return <></>;
   const element_class = element_pool.pack.classes.get(el.kind);
 
