@@ -58,3 +58,9 @@
   white-space: nowrap;
   user-select: none;
 }
+
+.idc-selection-rect {
+  position: absolute;
+  z-index: 999;
+  border: 1px dashed #336699;
+}

@@ -31,6 +31,26 @@ import CustomButton from "./components/buttons/custom_button.tsx";
 const DASHBOARD_MODIFIED_CONFIRM = "Dashboard has been modified. Exit editor?";
 const CLICK_MS = 300;
 
+interface Rect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
+}
+
+const coordsRect = (coords1: Coords, coords2: Coords): Rect => {
+  return {
+    left: Math.min(coords1.x, coords2.x),
+    top: Math.min(coords1.y, coords2.y),
+    right: Math.max(coords1.x, coords2.x),
+    bottom: Math.max(coords1.y, coords2.y),
+    width: Math.abs(coords1.x - coords2.x),
+    height: Math.abs(coords1.y - coords2.y)
+  };
+};
+
 export interface DashboardData {
   name: string;
   viewport: Coords;
@@ -362,6 +382,7 @@ export const DashboardEditor = ({
   const viewport_scrolled = useRef(false);
   const scrolling_enabled = useRef(false);
   const last_mouse_down = useRef(new Date());
+  const selection_start = useRef<Coords | null>(null);
 
   const oids_to_subscribe = useMemo(() => {
     const oids = element_pool.oids_to_subscribe();
@@ -601,7 +622,7 @@ export const DashboardEditor = ({
     }
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (e: any) => {
     if (element_pool.elements_dragged) {
       element_pool.selected_elements.forEach((el: DElement) => {
         fixPosition(el);
@@ -610,6 +631,22 @@ export const DashboardEditor = ({
     setSidebarDragged(false);
     setViewportScrolled(false);
     unsetElementDragged();
+    if (selection_start.current) {
+      const end_coords = getMouseEventCoords(e);
+      const rect = coordsRect(selection_start.current, end_coords);
+      setSelectedElement();
+      element_pool.items.forEach((el: DElement) => {
+        if (
+          el.position.x >= rect.left &&
+          el.position.x + 5 <= rect.right &&
+          el.position.y >= rect.top &&
+          el.position.y + 5 <= rect.bottom
+        ) {
+          element_pool.selected_elements.add(el);
+        }
+      });
+      selection_start.current = null;
+    }
   };
 
   const handleMouseMove = (e: any) => {
@@ -655,7 +692,11 @@ export const DashboardEditor = ({
       setLastMouseCoords(coords);
     } else {
       const coords = getMouseEventCoords(e);
+      const coords_changed = last_mouse_coords.current.x !== coords.x;
       setLastMouseCoords(coords);
+      if (selection_start.current && coords_changed) {
+        forceUpdate();
+      }
     }
   };
 
@@ -685,6 +726,9 @@ export const DashboardEditor = ({
         setLastClick(now);
       }
     } catch (e) {}
+    if (!e?.element_click) {
+      selection_start.current = getMouseEventCoords(e);
+    }
   };
 
   let saveDashboard: () => Promise<boolean> | undefined = undefined as any;
@@ -1003,6 +1047,15 @@ export const DashboardEditor = ({
               cur_offset={cur_offset_aligned}
             />
           ) : null}
+          {new Date().getTime() - last_mouse_down.current.getTime() >=
+            CLICK_MS && selection_start.current ? (
+            <SelectionRect
+              rect={coordsRect(
+                selection_start.current,
+                last_mouse_coords.current
+              )}
+            />
+          ) : null}
           <DisplayElements
             element_pool={element_pool}
             onMouseDown={handleMouseDownEl}
@@ -1204,5 +1257,19 @@ const ScrollHelpers = ({
         </div>
       ) : null}
     </>
+  );
+};
+
+const SelectionRect = ({ rect }: { rect: Rect }) => {
+  return (
+    <div
+      className="idc-selection-rect"
+      style={{
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height
+      }}
+    ></div>
   );
 };
