@@ -292,40 +292,39 @@ export const DashboardViewer = ({
     };
   }, []);
 
-  if (true) {
-    // TODO state block active/offline
-    return (
-      <div className="idc-dashboard-viewer-container">
-        <div className="idc-dashboard-viewport-container">
-          <div
-            className="idc-viewer-viewport"
-            style={{
-              width: data.viewport.x,
-              height: data.viewport.y
-            }}
-          >
-            <DisplayElements
-              element_pool={pool}
-              editor_mode={false}
-              onActionSuccess={onActionSuccess}
-              onActionFail={onActionFail}
-              cur_offset={{ x: 0, y: 0 }}
-            />
-          </div>
-        </div>
+  return (
+    <div className="idc-dashboard-viewer-container">
+      <div className="idc-dashboard-viewport-container">
         <div
-          className="idc-dashboard-viewer-close-button"
-          onClick={() => {
-            if (finish) finish();
+          className="idc-viewer-viewport"
+          style={{
+            width: data.viewport.x,
+            height: data.viewport.y
           }}
         >
-          <CloseIcon />
+          <DisplayElements
+            element_pool={pool}
+            editor_mode={false}
+            onActionSuccess={onActionSuccess}
+            onActionFail={onActionFail}
+            cur_offset={{ x: 0, y: 0 }}
+          />
         </div>
       </div>
-    );
-  } else {
-    return <div className="idc-dashboard-loading">Loading...</div>;
-  }
+      <div
+        className="idc-dashboard-viewer-close-button"
+        onClick={() => {
+          if (finish) finish();
+        }}
+      >
+        <CloseIcon />
+      </div>
+    </div>
+  );
+};
+
+const isClick = (click_time: Date): boolean => {
+  return new Date().getTime() - click_time.getTime() < CLICK_MS;
 };
 
 export const DashboardEditor = ({
@@ -708,7 +707,7 @@ export const DashboardEditor = ({
         setLastMouseCoords(coords);
         setSelectedElement();
         setHelpVisible(false);
-        if (now.getTime() - last_click.getTime() < CLICK_MS && !e.touches) {
+        if (isClick(last_click) && !e.touches) {
           setSidebarVisible(true);
         } else {
           if (scrolling_enabled.current) {
@@ -913,15 +912,11 @@ export const DashboardEditor = ({
     );
   }
 
-  const handleMouseDownEl = (e: any, element: DElement) => {
+  const handleMouseDownEl = (e: any, _element: DElement) => {
     e.element_click = true;
     last_mouse_down.current = new Date();
     setHelpVisible(false);
     if (!e.shiftKey) {
-      if (!element_pool.selected_elements.has(element)) {
-        setSelectedElement();
-        setSelectedElement(element);
-      }
       setElementDragged();
     }
   };
@@ -930,8 +925,10 @@ export const DashboardEditor = ({
     setLastMouseCoords(getMouseEventCoords(e));
     if (e.shiftKey) {
       toggleSelectedElement(element);
+    } else if (isClick(last_click)) {
+      setSelectedElement();
+      setSelectedElement(element);
     }
-    setHelpVisible(false);
   };
 
   const setSource = (data: DashboardData | null) => {
@@ -1036,8 +1033,7 @@ export const DashboardEditor = ({
             cur_offset={cur_offset_aligned}
             viewport={viewport.current}
           />
-          {new Date().getTime() - last_mouse_down.current.getTime() >=
-          CLICK_MS ? (
+          {!isClick(last_click) ? (
             <Rulers
               el={
                 element_pool.elements_dragged
@@ -1047,8 +1043,7 @@ export const DashboardEditor = ({
               cur_offset={cur_offset_aligned}
             />
           ) : null}
-          {new Date().getTime() - last_mouse_down.current.getTime() >=
-            CLICK_MS && selection_start.current ? (
+          {!isClick(last_click) && selection_start.current ? (
             <SelectionRect
               rect={coordsRect(
                 selection_start.current,
