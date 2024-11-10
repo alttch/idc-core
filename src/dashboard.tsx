@@ -519,6 +519,7 @@ export const DashboardEditor = ({
     if (el) {
       fixPosition(el);
       if (set_selected) {
+        setSelectedElement();
         setSelectedElement(el);
       }
       setModified();
@@ -1026,10 +1027,7 @@ export const DashboardEditor = ({
                 x: calculateX(e.pageX),
                 y: calculateY(e.pageY)
               };
-              const el = addElement(k, pos);
-              if (el) {
-                setSelectedElement(el);
-              }
+              addElement(k, pos, true);
             }
           }}
         >
