@@ -912,13 +912,18 @@ export const DashboardEditor = ({
     );
   }
 
-  const handleMouseDownEl = (e: any, _element: DElement) => {
+  const handleMouseDownEl = (e: any, element: DElement) => {
     e.element_click = true;
     last_mouse_down.current = new Date();
     setHelpVisible(false);
     if (!e.shiftKey) {
+      if (!element_pool.selected_elements.has(element)) {
+        setSelectedElement();
+        setSelectedElement(element);
+      }
       setElementDragged();
     }
+    setHelpVisible(false);
   };
 
   const handleMouseUpEl = (e: any, element: DElement) => {
