@@ -726,7 +726,7 @@ export const DashboardEditor = ({
         setLastClick(now);
       }
     } catch (e) {}
-    if (!e?.element_click) {
+    if (!e?.element_click && !scrolling_enabled.current) {
       selection_start.current = getMouseEventCoords(e);
     }
   };
