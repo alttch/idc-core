@@ -1142,27 +1142,27 @@ const HelpBox = ({
           </tr>
           <tr>
             <td>[l]</td>
-            <td>Enable/disable scrolling</td>
+            <td>enable/disable scrolling</td>
           </tr>
           <tr>
             <td>[Arrow keys]</td>
-            <td>Move selected element</td>
+            <td>move selected element</td>
           </tr>
           <tr>
             <td>[Shift+Arrow keys]</td>
-            <td>Scroll viewport</td>
+            <td>scroll viewport</td>
           </tr>
           <tr>
             <td>[Shift+LeftMouse]</td>
-            <td>Add/remove selection element</td>
+            <td>add/remove selection element</td>
           </tr>
           <tr>
             <td>[Ctrl+LeftMouse]</td>
-            <td>Global action (e.g. select an elements on top of others)</td>
+            <td>global action (e.g. select an elements on top of others)</td>
           </tr>
           <tr>
             <td>[Home]</td>
-            <td>Scroll home</td>
+            <td>scroll home</td>
           </tr>
           {save_help}
           {save_plus_finish_help}
