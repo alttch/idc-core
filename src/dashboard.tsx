@@ -634,7 +634,9 @@ export const DashboardEditor = ({
     if (selection_start.current) {
       const end_coords = getMouseEventCoords(e);
       const rect = coordsRect(selection_start.current, end_coords);
-      setSelectedElement();
+      if (!e.shiftKey) {
+        setSelectedElement();
+      }
       element_pool.items.forEach((el: DElement) => {
         if (
           el.position.x >= rect.left &&
