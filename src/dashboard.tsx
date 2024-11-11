@@ -639,10 +639,10 @@ export const DashboardEditor = ({
       }
       element_pool.items.forEach((el: DElement) => {
         if (
-          el.position.x >= rect.left &&
-          el.position.x + 5 <= rect.right &&
-          el.position.y >= rect.top &&
-          el.position.y + 5 <= rect.bottom
+          el.position.x + cur_offset.current.x >= rect.left &&
+          el.position.x + cur_offset.current.x + 5 <= rect.right &&
+          el.position.y + cur_offset.current.y >= rect.top &&
+          el.position.y + cur_offset.current.y + 5 <= rect.bottom
         ) {
           element_pool.selected_elements.add(el);
         }
