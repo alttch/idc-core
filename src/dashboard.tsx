@@ -914,6 +914,9 @@ export const DashboardEditor = ({
   }
 
   const handleMouseDownEl = (e: any, element: DElement) => {
+    if (e.ctrlKey) {
+      return;
+    }
     e.element_click = true;
     last_mouse_down.current = new Date();
     setHelpVisible(false);
@@ -1148,6 +1151,14 @@ const HelpBox = ({
           <tr>
             <td>[Shift+Arrow keys]</td>
             <td>Scroll viewport</td>
+          </tr>
+          <tr>
+            <td>[Shift+LeftMouse]</td>
+            <td>Add/remove selection element</td>
+          </tr>
+          <tr>
+            <td>[Ctrl+LeftMouse]</td>
+            <td>Global action (e.g. select an elements on top of others)</td>
           </tr>
           <tr>
             <td>[Home]</td>
