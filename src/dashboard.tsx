@@ -634,15 +634,19 @@ export const DashboardEditor = ({
     if (selection_start.current) {
       const end_coords = getMouseEventCoords(e);
       const rect = coordsRect(selection_start.current, end_coords);
+      rect.left = calculateX(rect.left);
+      rect.top = calculateY(rect.top);
+      rect.right = calculateX(rect.right);
+      rect.bottom = calculateY(rect.bottom);
       if (!e.shiftKey) {
         setSelectedElement();
       }
       element_pool.items.forEach((el: DElement) => {
         if (
-          el.position.x + cur_offset.current.x >= rect.left &&
-          el.position.x + cur_offset.current.x + 5 <= rect.right &&
-          el.position.y + cur_offset.current.y >= rect.top &&
-          el.position.y + cur_offset.current.y + 5 <= rect.bottom
+          el.position.x >= rect.left &&
+          el.position.x + 5 <= rect.right &&
+          el.position.y >= rect.top &&
+          el.position.y + 5 <= rect.bottom
         ) {
           element_pool.selected_elements.add(el);
         }
