@@ -545,6 +545,7 @@ export const DashboardEditor = ({
       });
       if (el) {
         el.params = JSON.parse(JSON.stringify(selected.params));
+        el.zindex = selected.zindex;
         new_elements.add(el);
         setModified();
       }
