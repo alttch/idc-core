@@ -632,8 +632,17 @@ export const DashboardEditor = ({
     setSidebarDragged(false);
     setViewportScrolled(false);
     unsetElementDragged();
-    if (selection_start.current) {
-      const end_coords = getMouseEventCoords(e);
+    if (
+      selection_start.current &&
+      (e.idc_element_click ||
+        e.target.className.indexOf("idc-editor-viewport") != -1)
+    ) {
+      let end_coords;
+      try {
+        end_coords = getMouseEventCoords(e);
+      } catch (e) {
+        end_coords = last_mouse_coords.current;
+      }
       const rect = coordsRect(selection_start.current, end_coords);
       rect.left = calculateX(rect.left);
       rect.top = calculateY(rect.top);
@@ -735,7 +744,7 @@ export const DashboardEditor = ({
         setLastClick(now);
       }
     } catch (e) {}
-    if (!e?.element_click && !scrolling_enabled.current) {
+    if (!e?.idc_element_click && !scrolling_enabled.current) {
       selection_start.current = getMouseEventCoords(e);
     }
   };
@@ -926,7 +935,7 @@ export const DashboardEditor = ({
     if (e.ctrlKey) {
       return;
     }
-    e.element_click = true;
+    e.idc_element_click = true;
     last_mouse_down.current = new Date();
     setHelpVisible(false);
     if (!e.shiftKey) {
@@ -940,7 +949,10 @@ export const DashboardEditor = ({
   };
 
   const handleMouseUpEl = (e: any, element: DElement) => {
-    setLastMouseCoords(getMouseEventCoords(e));
+    e.idc_element_click = true;
+    try {
+      setLastMouseCoords(getMouseEventCoords(e));
+    } catch (e) {}
     if (e.shiftKey) {
       toggleSelectedElement(element);
     } else if (isClick(last_click)) {
