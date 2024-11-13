@@ -713,7 +713,9 @@ export const DashboardEditor = ({
       if (e.target.className.indexOf("idc-editor-viewport") != -1) {
         const coords = getMouseEventCoords(e);
         setLastMouseCoords(coords);
-        setSelectedElement();
+        if (!e.shiftKey) {
+          setSelectedElement();
+        }
         setHelpVisible(false);
         if (isClick(last_click) && !e.touches) {
           setSidebarVisible(true);
