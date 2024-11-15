@@ -661,8 +661,8 @@ export const DashboardEditor = ({
           element_pool.selected_elements.add(el);
         }
       });
-      selection_start.current = null;
     }
+    selection_start.current = null;
   };
 
   const handleMouseMove = (e: any) => {
