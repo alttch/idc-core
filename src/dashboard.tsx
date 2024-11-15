@@ -635,7 +635,8 @@ export const DashboardEditor = ({
     if (
       selection_start.current &&
       (e.idc_element_click ||
-        e.target.className.indexOf("idc-editor-viewport") != -1)
+        e.target.className.indexOf("idc-editor-viewport") != -1 ||
+        e.target.className.indexOf("idc-selection-rect") != -1)
     ) {
       let end_coords;
       try {
