@@ -374,6 +374,7 @@ export const DashboardEditor = ({
   }, [session_id]);
   // keep as useRef to make dragging faster!
   const last_mouse_coords = useRef({ x: 0, y: 0 });
+  const last_mouse_drag_coords = useRef<Coords | null>(null);
   // keep as useRef to let global key bindings work
   const sidebar_visible = useRef(true);
   const help_visible = useRef(false);
@@ -506,6 +507,10 @@ export const DashboardEditor = ({
     last_mouse_coords.current = coords;
   };
 
+  const setLastMouseDragCoords = (coords: Coords | null) => {
+    last_mouse_drag_coords.current = coords;
+  };
+
   const handleClose = () => {
     setIsShowModalExit(false);
   };
@@ -631,6 +636,7 @@ export const DashboardEditor = ({
     }
     setSidebarDragged(false);
     setViewportScrolled(false);
+    setLastMouseDragCoords(null);
     unsetElementDragged();
     if (
       selection_start.current &&
@@ -669,15 +675,18 @@ export const DashboardEditor = ({
   const handleMouseMove = (e: any) => {
     if (element_pool.elements_dragged) {
       const coords = getMouseEventCoords(e);
-      const delta_x = last_mouse_coords.current.x - coords.x;
-      const delta_y = last_mouse_coords.current.y - coords.y;
-      element_pool.selected_elements.forEach((el: DElement) => {
-        el.position.x -= delta_x;
-        el.position.y -= delta_y;
-        fixPosition(el, false);
-      });
-      setModified();
+      if (last_mouse_drag_coords.current) {
+        const delta_x = last_mouse_drag_coords.current.x - coords.x;
+        const delta_y = last_mouse_drag_coords.current.y - coords.y;
+        element_pool.selected_elements.forEach((el: DElement) => {
+          el.position.x -= delta_x;
+          el.position.y -= delta_y;
+          fixPosition(el, false);
+        });
+        setModified();
+      }
       setLastMouseCoords(coords);
+      setLastMouseDragCoords(coords);
       forceUpdate();
     } else if (sidebar_dragged) {
       let width = sidebar_width;
