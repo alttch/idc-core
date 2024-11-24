@@ -140,8 +140,8 @@ export class ElementPool {
     return this.items.map((el) => {
       return {
         kind: el.kind,
-        params: el.params,
-        position: el.position,
+        params: JSON.parse(JSON.stringify(el.params)),
+        position: JSON.parse(JSON.stringify(el.position)),
         zindex: el.zindex
       };
     });
@@ -150,7 +150,8 @@ export class ElementPool {
   import(data: Array<DElementData>) {
     if (data) {
       this.items = data.map((d) => {
-        return { id: uuidv4(), ...d };
+        const data = JSON.parse(JSON.stringify(d));
+        return { id: uuidv4(), ...data };
       });
     } else {
       this.items = [];

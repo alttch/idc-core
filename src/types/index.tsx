@@ -5,6 +5,8 @@ export interface CustomButtonProps {
   type?: "button" | "submit" | "reset";
   children?: ReactNode;
   onClick?: () => void;
+  disabled?: boolean;
+  title?: string;
 }
 
 export interface ModalDialogProps {

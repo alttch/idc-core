@@ -327,6 +327,10 @@ const isClick = (click_time: Date): boolean => {
   return new Date().getTime() - click_time.getTime() < CLICK_MS;
 };
 
+interface UndoData {
+  data: DashboardData;
+}
+
 export const DashboardEditor = ({
   session_id,
   offsetX,
@@ -351,6 +355,8 @@ export const DashboardEditor = ({
   ignore_modified?: boolean;
 }) => {
   const [loaded, setLoaded] = useState(false);
+  const undoHistory = useRef<Array<UndoData>>(data ? [{ data }] : []);
+  const undoCursor = useRef(0);
   const name = useRef(DEFAULT_NAME);
   const customData = useRef<any>(null);
   const viewport = useRef(DEFAULT_VIEWPORT);
@@ -396,8 +402,68 @@ export const DashboardEditor = ({
 
   const modified = useRef(false);
 
-  const setModified = () => {
+  const exportData = (): DashboardData => {
+    const data: DashboardData = {
+      name: name.current,
+      viewport: viewport.current,
+      scale: scale.current,
+      grid: grid.current,
+      elements: element_pool.export(),
+      custom_data: customData.current
+    };
+    return data;
+  };
+
+  const snapshotUndo = () => {
+    undoCursor.current++;
+    undoHistory.current = undoHistory.current.slice(0, undoCursor.current);
+    const selected_elements = new Set<DElement>();
+    element_pool.selected_elements.forEach((el) => {
+      selected_elements.add(el);
+    });
+    const undo_data = { data: exportData(), selected_elements };
+    undoHistory.current.push(undo_data);
+  };
+
+  const applyUndoData = () => {
+    const undo_data = undoHistory.current[undoCursor.current];
+    setName(undo_data.data.name);
+    setViewport(undo_data.data.viewport);
+    setScale(undo_data.data.scale);
+    setGrid(undo_data.data.grid);
+    customData.current = undo_data.data.custom_data;
+    element_pool.import(undo_data.data.elements);
+    setModified(false);
+    forceUpdate();
+  };
+
+  const canUndo = (): boolean => {
+    return undoCursor.current > 0;
+  };
+
+  const canRedo = (): boolean => {
+    return undoCursor.current < undoHistory.current.length - 1;
+  };
+
+  const undoChanges = () => {
+    if (canUndo()) {
+      undoCursor.current--;
+      applyUndoData();
+    }
+  };
+
+  const redoChanges = () => {
+    if (canRedo()) {
+      undoCursor.current++;
+      applyUndoData();
+    }
+  };
+
+  const setModified = (snapshot_undo?: boolean) => {
     modified.current = true;
+    if (snapshot_undo) {
+      snapshotUndo();
+    }
   };
 
   const notifySubscribedOIDsChanged = () => {
@@ -466,11 +532,13 @@ export const DashboardEditor = ({
 
   const setSelectedElement = (el?: DElement) => {
     element_pool.set_selected(el);
+    snapshotUndo();
     forceUpdate();
   };
 
   const toggleSelectedElement = (el: DElement) => {
     element_pool.toggle_selected(el);
+    snapshotUndo();
     forceUpdate();
   };
 
@@ -527,7 +595,7 @@ export const DashboardEditor = ({
         setSelectedElement();
         setSelectedElement(el);
       }
-      setModified();
+      setModified(true);
       return el;
     }
     return null;
@@ -537,7 +605,7 @@ export const DashboardEditor = ({
     element_pool.items.map((el) => {
       fixPosition(el);
     });
-    setModified();
+    setModified(true);
     forceUpdate();
   };
 
@@ -552,9 +620,12 @@ export const DashboardEditor = ({
         el.params = JSON.parse(JSON.stringify(selected.params));
         el.zindex = selected.zindex;
         new_elements.add(el);
-        setModified();
+        setModified(false);
       }
     });
+    if (element_pool.selected_elements) {
+      setModified(true);
+    }
     element_pool.selected_elements = new_elements;
     forceUpdate();
   };
@@ -564,7 +635,7 @@ export const DashboardEditor = ({
       element_pool.selected_elements.forEach((el: DElement) => {
         element_pool.delete(el.id);
       });
-      setModified();
+      setModified(true);
     }
     setSelectedElement();
     notifySubscribedOIDsChanged();
@@ -572,24 +643,12 @@ export const DashboardEditor = ({
 
   const deleteAllElements = () => {
     if (element_pool.items.length > 0) {
-      setModified();
+      setModified(true);
     }
     element_pool.clear();
     setSelectedElement();
     notifySubscribedOIDsChanged();
     onSuccess("dashboard cleared");
-  };
-
-  const exportData = (): DashboardData => {
-    const data: DashboardData = {
-      name: name.current,
-      viewport: viewport.current,
-      scale: scale.current,
-      grid: grid.current,
-      elements: element_pool.export(),
-      custom_data: customData.current
-    };
-    return data;
   };
 
   const showSource = () => {
@@ -637,6 +696,9 @@ export const DashboardEditor = ({
     setSidebarDragged(false);
     setViewportScrolled(false);
     setLastMouseDragCoords(null);
+    if (element_pool.elements_dragged) {
+      setModified(true);
+    }
     unsetElementDragged();
     if (
       selection_start.current &&
@@ -808,7 +870,7 @@ export const DashboardEditor = ({
                   el.position.x -= grid.current;
                   fixPosition(el, true);
                 });
-                setModified();
+                setModified(true);
                 forceUpdate();
               }
             } else {
@@ -827,7 +889,7 @@ export const DashboardEditor = ({
                   el.position.x += grid.current;
                   fixPosition(el, true);
                 });
-                setModified();
+                setModified(true);
                 forceUpdate();
               }
             } else {
@@ -844,7 +906,7 @@ export const DashboardEditor = ({
                   el.position.y -= grid.current;
                   fixPosition(el, true);
                 });
-                setModified();
+                setModified(true);
                 forceUpdate();
               }
             } else {
@@ -861,7 +923,7 @@ export const DashboardEditor = ({
                   el.position.y += grid.current;
                   fixPosition(el, true);
                 });
-                setModified();
+                setModified(true);
                 forceUpdate();
               }
             } else {
@@ -869,6 +931,18 @@ export const DashboardEditor = ({
                 x: cur_offset.current.x,
                 y: cur_offset.current.y - grid.current
               });
+            }
+            break;
+          case "KeyZ":
+            if (e.ctrlKey) {
+              e.preventDefault();
+              undoChanges();
+            }
+            break;
+          case "KeyY":
+            if (e.ctrlKey) {
+              e.preventDefault();
+              redoChanges();
             }
             break;
           case "KeyX":
@@ -971,15 +1045,17 @@ export const DashboardEditor = ({
     }
   };
 
-  const setSource = (data: DashboardData | null) => {
+  const setSource = (data: DashboardData | null, notify?: true) => {
     if (data) {
       setName(data.name);
       setViewport(data.viewport);
       setGrid(data.grid);
       element_pool.import(data.elements);
       customData.current = data?.custom_data || null;
-      setModified();
-      onSuccess("dashboard source set");
+      setModified(true);
+      if (notify) {
+        onSuccess("dashboard source set");
+      }
     }
     setSelectedElement();
     unsetElementDragged();
@@ -1041,6 +1117,10 @@ export const DashboardEditor = ({
         notifySubscribedOIDsChanged={notifySubscribedOIDsChanged}
         onError={onError}
         setModified={setModified}
+        undoChanges={undoChanges}
+        redoChanges={redoChanges}
+        can_undo={canUndo()}
+        can_redo={canRedo()}
       />
       {help_box}
       <div className="idc-dashboard-viewport-container">
@@ -1178,6 +1258,14 @@ const HelpBox = ({
           <tr>
             <td>[Arrow keys]</td>
             <td>move selected element</td>
+          </tr>
+          <tr>
+            <td>[Ctrl+Z]</td>
+            <td>undo changes</td>
+          </tr>
+          <tr>
+            <td>[Ctrl+Y]</td>
+            <td>redo changes</td>
           </tr>
           <tr>
             <td>[Shift+Arrow keys]</td>

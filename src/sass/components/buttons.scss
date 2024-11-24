@@ -15,32 +15,43 @@
   cursor: pointer;
   transition: 0.3s;
 
-  @include media(desktop){
-    &:hover{
+  @include media(desktop) {
+    &:hover {
       transform: scale(0.96);
       transition: 0.3s;
     }
   }
-
 }
 
-.idc-btn-outlined{
+.idc-btn:disabled {
+  color: var(--idc-btn-disabled-color);
+  > svg {
+    filter: contrast(0.1);
+  }
+}
+
+.idc-btn-narrow {
+  min-width: 40px;
+  max-width: 80px;
+}
+
+.idc-btn-outlined {
   border: 1px solid var(--idc-decorator-color);
   color: var(--idc-heading-color);
 }
 
-.idc-btn-outlined-no-icon{
+.idc-btn-outlined-no-icon {
   border: 1px solid var(--idc-decorator-color);
   color: var(--idc-heading-color);
-  padding: 7px ;
+  padding: 7px;
 
-  &.clear{
+  &.clear {
     border: 1px solid var(--idc-btn-reset-color);
     color: var(--idc-btn-reset-color);
   }
 }
 
-.idc-btn-delete{
+.idc-btn-delete {
   border: 1px solid var(--idc-btn-reset-color);
   color: var(--idc-btn-reset-color);
 }

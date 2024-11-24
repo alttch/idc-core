@@ -26,6 +26,8 @@ import {
   SaveAltOutlined,
   SourceOutlined
 } from "@mui/icons-material";
+import UndoIcon from "@mui/icons-material/Undo";
+import RedoIcon from "@mui/icons-material/Redo";
 import NorthWestIcon from "@mui/icons-material/NorthWest";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
@@ -63,7 +65,11 @@ export const Sidebar = ({
   finish,
   notifySubscribedOIDsChanged,
   onError,
-  setModified
+  setModified,
+  undoChanges,
+  redoChanges,
+  can_undo,
+  can_redo
 }: {
   session_id: string;
   element_pool: ElementPool;
@@ -95,7 +101,11 @@ export const Sidebar = ({
   finish?: () => void;
   notifySubscribedOIDsChanged: () => void;
   onError: (message: any) => void;
-  setModified: () => void;
+  setModified: (snapshot_undo?: boolean) => void;
+  undoChanges: () => void;
+  redoChanges: () => void;
+  can_undo: boolean;
+  can_redo: boolean;
 }) => {
   const [error_message, setErrorMessage] = useState<null | string>(null);
 
@@ -165,6 +175,10 @@ export const Sidebar = ({
           save={save}
           finish={finish}
           setModified={setModified}
+          undoChanges={undoChanges}
+          redoChanges={redoChanges}
+          can_undo={can_undo}
+          can_redo={can_redo}
         />
       </div>
     </>
@@ -231,7 +245,7 @@ const ElementPropsBar = ({
   deleteSelectedElement: () => void;
   viewport: Coords;
   onError: (message: any) => void;
-  setModified: () => void;
+  setModified: (snapshot_undo: boolean) => void;
   notifySubscribedOIDsChanged: () => void;
 }) => {
   if (element_pool.selected_elements.size > 1) {
@@ -328,7 +342,7 @@ const ElementPropsBar = ({
                       current_value={position.x}
                       setParam={(x) => {
                         position.x = x;
-                        setModified();
+                        setModified(true);
                         forceUpdate();
                       }}
                       params={{ size: 4, min: 0, max: viewport.x }}
@@ -344,7 +358,7 @@ const ElementPropsBar = ({
                       current_value={position.y}
                       setParam={(y) => {
                         position.y = y;
-                        setModified();
+                        setModified(true);
                         forceUpdate();
                       }}
                       params={{ size: 4, min: 0, max: viewport.y }}
@@ -363,7 +377,7 @@ const ElementPropsBar = ({
                             current_value={el.zindex}
                             setParam={(z) => {
                               el.zindex = z;
-                              setModified();
+                              setModified(true);
                               forceUpdate();
                             }}
                             params={{ size: 3, min: 0, max: 99 }}
@@ -373,7 +387,7 @@ const ElementPropsBar = ({
                       {element_class.props.map((v, k) => {
                         const setParam = (value: any) => {
                           el.params[v.name] = value;
-                          setModified();
+                          setModified(true);
                           forceUpdate();
                         };
                         return (
@@ -429,7 +443,11 @@ const GlobalsBar = ({
   showSource,
   save,
   finish,
-  setModified
+  setModified,
+  undoChanges,
+  redoChanges,
+  can_undo,
+  can_redo
 }: {
   session_id: string;
   viewport: Coords;
@@ -449,18 +467,22 @@ const GlobalsBar = ({
   showSource: () => void;
   save?: () => Promise<boolean> | undefined;
   finish?: () => void;
-  setModified: () => void;
+  setModified: (snapshot_undo: boolean) => void;
+  undoChanges: () => void;
+  redoChanges: () => void;
+  can_undo: boolean;
+  can_redo: boolean;
 }) => {
   const [isShowModal, setIsShowModal] = useState(false);
 
   const setViewportX = (x: number) => {
     setViewport({ x: x, y: viewport.y });
-    setModified();
+    setModified(true);
   };
 
   const setViewportY = (y: number) => {
     setViewport({ x: viewport.x, y: y });
-    setModified();
+    setModified(true);
   };
 
   let btn_save;
@@ -517,7 +539,7 @@ const GlobalsBar = ({
                   <EditString
                     current_value={name}
                     setParam={(...params) => {
-                      setModified();
+                      setModified(true);
                       setName(...params);
                     }}
                     params={{ size: 20 }}
@@ -527,6 +549,24 @@ const GlobalsBar = ({
               <tr className="idc-editor-sidebar-row">
                 <td colSpan={2}>
                   <div className="idc-editor-sidebar-buttons-container">
+                    <CustomButton
+                      type="button"
+                      className="idc-btn idc-btn-outlined idc-btn-narrow"
+                      onClick={undoChanges}
+                      disabled={!can_undo}
+                      title="Undo changes"
+                    >
+                      <UndoIcon />
+                    </CustomButton>
+                    <CustomButton
+                      type="button"
+                      className="idc-btn idc-btn-outlined idc-btn-narrow"
+                      onClick={redoChanges}
+                      disabled={!can_redo}
+                      title="Redo changes"
+                    >
+                      <RedoIcon />
+                    </CustomButton>
                     <CustomButton
                       type="button"
                       className="idc-btn idc-btn-outlined"
@@ -576,7 +616,7 @@ const GlobalsBar = ({
                     current_value={scale}
                     setParam={(val: number) => {
                       setScale(val);
-                      setModified();
+                      setModified(true);
                     }}
                     step={0.1}
                     params={{ min: 0.1, float: true }}
@@ -593,7 +633,7 @@ const GlobalsBar = ({
                     value={grid}
                     onChange={(e) => {
                       setGrid(parseInt(e.target.value as string));
-                      setModified();
+                      setModified(true);
                     }}
                   >
                     {GRIDS.map((d) => {

@@ -5,9 +5,17 @@ const CustomButton = ({
   type = "button",
   children,
   onClick,
+  disabled,
+  title,
 }: CustomButtonProps) => {
   return (
-    <button className={className} type={type} onClick={onClick}>
+    <button
+      title={title}
+      disabled={disabled}
+      className={className}
+      type={type}
+      onClick={onClick}
+    >
       {children}
     </button>
   );
