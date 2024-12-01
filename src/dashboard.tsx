@@ -230,6 +230,7 @@ export const DashboardViewer = ({
   onActionSuccess: (result: ActionResult) => void;
   onActionFail: (err: EvaError) => void;
 }) => {
+  const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const pool = useMemo(() => {
     let pool = new ElementPool(element_pack);
     pool.import(data.elements);
@@ -239,7 +240,7 @@ export const DashboardViewer = ({
   const oids_to_subscribe = useMemo(() => {
     const oids = pool.oids_to_subscribe();
     return oids;
-  }, [pool]);
+  }, [pool, pool.variables_map_id]);
 
   useEvaStateBlock(
     { name: `idc-${session_id}`, state_updates: oids_to_subscribe },
@@ -307,6 +308,7 @@ export const DashboardViewer = ({
             editor_mode={false}
             onActionSuccess={onActionSuccess}
             onActionFail={onActionFail}
+            forceUpdate={forceUpdate}
             cur_offset={{ x: 0, y: 0 }}
           />
         </div>
@@ -393,7 +395,7 @@ export const DashboardEditor = ({
   const oids_to_subscribe = useMemo(() => {
     const oids = element_pool.oids_to_subscribe();
     return oids;
-  }, [element_pool, resOids]);
+  }, [element_pool, resOids, element_pool.variables_map_id]);
 
   useEvaStateBlock(
     { name: `idc-${session_id}`, state_updates: oids_to_subscribe },
@@ -1176,6 +1178,7 @@ export const DashboardEditor = ({
             editor_mode={true}
             cur_offset={cur_offset_aligned}
             viewport_scrolled={viewport_scrolled.current}
+            forceUpdate={forceUpdate}
           />
         </div>
       </div>

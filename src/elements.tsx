@@ -3,6 +3,7 @@ import { Coords } from "bmat/dom";
 import { EvaError, ActionResult } from "@eva-ics/webengine";
 import { useDoubleTap } from "./hooks/useDoubleTap.tsx";
 import { Property, PropertyKind } from "./properties";
+import { DispatchWithoutAction } from "react";
 
 export interface ElementClass {
   description: string;
@@ -23,11 +24,17 @@ export interface ElementPack {
     kind,
     dragged,
     vendored,
+    setVariable,
+    getVariable,
+    forceUpdate,
     ...params
   }: {
     kind: string;
     dragged: boolean;
     vendored?: any;
+    setVariable: (name: string, value: string) => void;
+    getVariable: (name: string) => string | undefined;
+    forceUpdate: DispatchWithoutAction;
   }) => JSX.Element;
 }
 
@@ -36,12 +43,25 @@ export class ElementPool {
   pack: ElementPack;
   selected_elements: Set<DElement>;
   elements_dragged: boolean;
+  variables: Map<string, string>;
+  variables_map_id: string;
 
   constructor(pack: ElementPack) {
     this.items = [];
     this.pack = pack;
     this.selected_elements = new Set();
     this.elements_dragged = false;
+    this.variables = new Map();
+    this.variables_map_id = uuidv4();
+  }
+
+  setVariable(name: string, value: string) {
+    this.variables.set(name, value);
+    this.variables_map_id = uuidv4();
+  }
+
+  getVariable(name: string): string | undefined {
+    return this.variables.get(name);
   }
 
   oids_to_subscribe(): Array<string> {
@@ -63,7 +83,12 @@ export class ElementPool {
         }
       });
     });
-    return Array.from(oids_to_subscribe);
+    return Array.from(oids_to_subscribe).map((oid) => {
+      for (const [var_name, var_value] of this.variables) {
+        oid = oid.replaceAll("${" + var_name + "}", var_value);
+      }
+      return oid;
+    });
   }
 
   add(kind: string, pos?: Coords): DElement {
@@ -168,7 +193,8 @@ export const DisplayElements = ({
   onActionSuccess,
   onActionFail,
   cur_offset,
-  viewport_scrolled
+  viewport_scrolled,
+  forceUpdate
 }: {
   element_pool: ElementPool;
   onMouseDown?: (e: any, element: DElement) => void;
@@ -179,6 +205,7 @@ export const DisplayElements = ({
   onActionFail?: (err: EvaError) => void;
   cur_offset: Coords;
   viewport_scrolled?: boolean;
+  forceUpdate: DispatchWithoutAction;
 }): JSX.Element => {
   const doubleTapOpenSideBar = useDoubleTap(() => {
     if (setSidebarVisible) {
@@ -213,13 +240,30 @@ export const DisplayElements = ({
             params.on_fail = onActionFail;
           }
         }
+        for (const key of Object.keys(params)) {
+          const value = params[key];
+          if (typeof value === "string") {
+            for (const [var_name, var_value] of element_pool.variables) {
+              // replace variables ${var_name} with var_value
+              params[key] = value.replaceAll("${" + var_name + "}", var_value);
+            }
+          }
+        }
         const key = el.id || `dashboard-element-${i}`;
+        const setDashboardVariable =
+          element_pool.setVariable.bind(element_pool);
         let el_view = (
           <>
             <Viewer
               kind={el.kind}
               dragged={dragged || viewport_scrolled}
               vendored={element_class?.vendored}
+              setVariable={(name, value) => {
+                setDashboardVariable(name, value);
+                forceUpdate();
+              }}
+              getVariable={element_pool.getVariable.bind(element_pool)}
+              forceUpdate={forceUpdate}
               {...params}
             />
           </>
