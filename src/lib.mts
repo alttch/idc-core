@@ -6,3 +6,4 @@ export { PropertyKind } from "./properties";
 export { fontWeight } from "./common";
 export type { ElementClass, ElementPack } from "./elements";
 export type { ValueMap } from "./property_editors/value_map";
+export type { ValueColorMap } from "./property_editors/value_color_map";

@@ -12,6 +12,7 @@ import { EditBoolean } from "./property_editors/boolean";
 import { EditOID } from "./property_editors/oid";
 import { Dispatch, SetStateAction } from "react";
 import { EditValueMap } from "./property_editors/value_map";
+import { EditValueColorMap } from "./property_editors/value_color_map";
 
 export interface Property {
   id: string;
@@ -34,7 +35,8 @@ export enum PropertyKind {
   Boolean = "boolean",
   OID = "oid",
   OIDSubscribed = "oid_subscribed",
-  ValueMap = "value_map"
+  ValueMap = "value_map",
+  ValueColorMap = "value_color_map"
 }
 
 export const PropertyEditor = ({
@@ -97,6 +99,9 @@ export const PropertyEditor = ({
       break;
     case PropertyKind.ValueMap:
       editor = <EditValueMap {...props} />;
+      break;
+    case PropertyKind.ValueColorMap:
+      editor = <EditValueColorMap {...props} />;
       break;
   }
   return <>{editor}</>;
