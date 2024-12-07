@@ -16,6 +16,22 @@ export interface ElementClass {
   actions: boolean;
   default_zIndex?: number;
   IconDraw?: () => JSX.Element;
+  Viewer?: ({
+    kind,
+    dragged,
+    vendored,
+    setVariable,
+    getVariable,
+    forceUpdate,
+    ...params
+  }: {
+    kind: string;
+    dragged: boolean;
+    vendored?: any;
+    setVariable: (name: string, value: string) => void;
+    getVariable: (name: string) => string | undefined;
+    forceUpdate: DispatchWithoutAction;
+  }) => JSX.Element;
 }
 
 export interface ElementPack {
@@ -213,7 +229,7 @@ export const DisplayElements = ({
     }
   });
 
-  const Viewer = element_pool.pack.Viewer;
+  const DefaultViewer = element_pool.pack.Viewer;
 
   return (
     <>
@@ -252,6 +268,7 @@ export const DisplayElements = ({
         const key = el.id || `dashboard-element-${i}`;
         const setDashboardVariable =
           element_pool.setVariable.bind(element_pool);
+        const Viewer = element_class?.Viewer || DefaultViewer;
         let el_view = (
           <>
             <Viewer
