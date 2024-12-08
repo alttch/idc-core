@@ -313,8 +313,8 @@ export const DisplayElements = ({
             key={key}
             className={css_class}
             style={{
-              left: el.position.x - cur_offset.x,
-              top: el.position.y - cur_offset.y,
+              left: el.position.x - cur_offset.x - (selected ? 2 : 0),
+              top: el.position.y - cur_offset.y - (selected ? 2 : 0),
               zIndex: el.zindex
             }}
             {...doubleTapOpenSideBar}
