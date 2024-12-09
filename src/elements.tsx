@@ -257,11 +257,10 @@ export const DisplayElements = ({
           }
         }
         for (const key of Object.keys(params)) {
-          const value = params[key];
-          if (typeof value === "string") {
+          if (typeof params[key] === "string") {
             for (const [var_name, var_value] of element_pool.variables) {
               // replace variables ${var_name} with var_value
-              params[key] = value.replaceAll("${" + var_name + "}", var_value);
+              params[key] = params[key].replaceAll("${" + var_name + "}", var_value);
             }
           }
         }
