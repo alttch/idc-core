@@ -3,7 +3,7 @@ import { EditNumber } from "./property_editors/number";
 import { EditString } from "./property_editors/string";
 import { EditSelectNumber } from "./property_editors/select_number";
 import { DIMENSIONS, GRIDS } from "./common";
-import { ElementPool } from "./elements";
+import { ElementPool, ElementClass } from "./elements";
 import { PropertyEditor, PropertyKind } from "./properties";
 import {
   Accordion,
@@ -721,7 +721,9 @@ const ElementsBar = ({
 }) => {
   const element_map = useMemo(() => {
     let map = new Map();
-    for (const [k, el_class] of element_pool.pack.classes) {
+    const class_names = Array.from(element_pool.pack.classes.keys()).sort();
+    for (const k of class_names) {
+      const el_class = element_pool.pack.classes.get(k) as ElementClass;
       let group_map = map.get(el_class.group);
       if (group_map === undefined) {
         group_map = new Map();
@@ -729,7 +731,7 @@ const ElementsBar = ({
       }
       group_map.set(k, el_class);
     }
-    return Array.from(map);
+    return Array.from(map).sort();
   }, [element_pool]);
 
   return (
