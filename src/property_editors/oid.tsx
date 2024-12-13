@@ -49,13 +49,6 @@ export const EditOID = ({
         freeSolo
         disableClearable
         options={states.data.map((s: any) => s.oid)}
-        // value={current_value || ""}
-        // onChange={(_, val) => {
-        //   setParam(val ? val : undefined);
-        //   if (notifyGlobalChange) {
-        //     notifyGlobalChange();
-        //   }
-        // }}
         value={inputValue || ""}
         onInputChange={(_, newInputValue) => {
           setInputValue(newInputValue);
@@ -63,6 +56,13 @@ export const EditOID = ({
         onChange={(_, val) => {
           const newValue = val ? val : inputValue;
           handleSaveValue(newValue);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            handleSaveValue(inputValue);
+            (e.target as HTMLInputElement).blur();
+          }
         }}
         onFocus={() => {
           handleSaveValue(inputValue);
