@@ -708,6 +708,11 @@ const GlobalsBar = ({
   );
 };
 
+interface ElementClassInfo {
+  class_name: string;
+  description: string;
+}
+
 const ElementsBar = ({
   element_pool,
   cur_offset,
@@ -721,8 +726,14 @@ const ElementsBar = ({
 }) => {
   const element_map = useMemo(() => {
     let map = new Map();
-    const class_names = Array.from(element_pool.pack.classes.keys()).sort();
-    for (const k of class_names) {
+    const class_info: Array<ElementClassInfo> = [];
+    for (const [k, v] of element_pool.pack.classes) {
+      class_info.push({ class_name: k, description: v.description || k });
+    }
+    // sort class_info by description
+    class_info.sort((a, b) => a.description.localeCompare(b.description));
+    for (const ci of class_info) {
+      const k = ci.class_name;
       const el_class = element_pool.pack.classes.get(k) as ElementClass;
       let group_map = map.get(el_class.group);
       if (group_map === undefined) {
