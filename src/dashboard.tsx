@@ -588,14 +588,15 @@ export const DashboardEditor = ({
   const addElement = (
     kind: string,
     pos?: Coords,
-    set_selected?: boolean
+    activate?: boolean
   ): DElement | null => {
     const el = element_pool.add(kind, pos || { ...cur_offset.current });
     if (el) {
       fixPosition(el);
-      if (set_selected) {
+      if (activate) {
         setSelectedElement();
         setSelectedElement(el);
+        notifySubscribedOIDsChanged();
       }
       setModified(true);
       return el;
