@@ -17,7 +17,7 @@ import { EditValueColorMap } from "./property_editors/value_color_map";
 export interface Property {
   id: string;
   name: string;
-  kind: PropertyKind;
+  kind: PropertyKind | string;
   params?: any;
 }
 

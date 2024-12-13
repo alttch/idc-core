@@ -4,7 +4,7 @@ import { EditString } from "./property_editors/string";
 import { EditSelectNumber } from "./property_editors/select_number";
 import { DIMENSIONS, GRIDS } from "./common";
 import { ElementPool } from "./elements";
-import { PropertyEditor } from "./properties";
+import { PropertyEditor, PropertyKind } from "./properties";
 import {
   Accordion,
   AccordionDetails,
@@ -395,7 +395,7 @@ const ElementPropsBar = ({
                             <td>{v.name}</td>
                             <td>
                               <PropertyEditor
-                                kind={v.kind}
+                                kind={v.kind as PropertyKind}
                                 element_id={el.id}
                                 current_value={el.params[v.name]}
                                 setParam={setParam}
