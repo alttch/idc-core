@@ -120,7 +120,7 @@ export const ValueColorMapEditor = ({
       <Dialog open={isOpen} onClose={closeDialog}>
         <DialogTitle>{params?.title}</DialogTitle>
         <DialogContent>
-          <div style={{ marginBottom: "10px" }}>{params.help}</div>
+          <div style={{ marginBottom: "10px" }}>{params?.help}</div>
           {value_map.map((item, index) => (
             <Box
               key={index}
