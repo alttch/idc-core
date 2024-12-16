@@ -7,15 +7,16 @@ import { useEffect, useState } from "react";
 export const EditSelectServerOID = ({
   current_value = "",
   setParam,
-  params
+  params,
 }: {
   current_value: string;
   setParam: (a: string) => void;
-  params?: { i?: Array<string> | string, src?: string  };
+  params?: { i?: Array<string> | string; src?: string };
 }): JSX.Element => {
   const eva = get_engine() as Eva;
 
   const [oid_list, setOIDList] = useState<Array<string>>([]);
+  const [inputValue, setInputValue] = useState(current_value);
 
   useEffect(() => {
     if (eva?.server_info?.acl?.admin) {
@@ -27,6 +28,14 @@ export const EditSelectServerOID = ({
     }
   }, [params]);
 
+  useEffect(() => {
+    setInputValue(current_value);
+  }, [current_value]);
+
+  const handleSaveValue = (value: string) => {
+    setParam(value);
+  };
+
   if (eva?.server_info?.acl?.admin) {
     return (
       <ThemeProvider theme={THEME}>
@@ -35,9 +44,26 @@ export const EditSelectServerOID = ({
           freeSolo
           options={oid_list}
           disableClearable
-          value={current_value || ""}
+          value={inputValue || ""}
+          onInputChange={(_, newInputValue) => {
+            setInputValue(newInputValue);
+          }}
           onChange={(_, val) => {
-            setParam(val);
+            const newValue = val ? val : inputValue;
+            handleSaveValue(newValue);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleSaveValue(inputValue);
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
+          onFocus={() => {
+            handleSaveValue(inputValue);
+          }}
+          onBlur={() => {
+            handleSaveValue(inputValue);
           }}
           renderInput={(params) => (
             <TextField
@@ -45,7 +71,7 @@ export const EditSelectServerOID = ({
               {...params}
               InputProps={{
                 ...params.InputProps,
-                type: "search"
+                type: "search",
               }}
             />
           )}
@@ -58,10 +84,23 @@ export const EditSelectServerOID = ({
         <TextField
           fullWidth
           type="text"
-          value={current_value}
           // size={params?.size}
+          value={inputValue || ""}
           onChange={(e) => {
-            setParam(e.target.value);
+            setInputValue(e.target.value);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleSaveValue(inputValue);
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
+          onFocus={() => {
+            handleSaveValue(inputValue);
+          }}
+          onBlur={() => {
+            handleSaveValue(inputValue);
           }}
         />
       </>
