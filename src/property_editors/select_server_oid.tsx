@@ -8,15 +8,23 @@ export const EditSelectServerOID = ({
   current_value = "",
   setParam,
   params,
+  notifyGlobalChange,
+  element_id,
 }: {
   current_value: string;
   setParam: (a: string) => void;
   params?: { i?: Array<string> | string; src?: string };
+  notifyGlobalChange?: () => void;
+  element_id?: string;
 }): JSX.Element => {
   const eva = get_engine() as Eva;
 
   const [oid_list, setOIDList] = useState<Array<string>>([]);
-  const [inputValue, setInputValue] = useState(current_value);
+  const [inputValue, setInputValue] = useState(current_value || "");
+
+  useEffect(() => {
+    setInputValue(current_value);
+  }, [current_value]);
 
   useEffect(() => {
     if (eva?.server_info?.acl?.admin) {
@@ -28,42 +36,44 @@ export const EditSelectServerOID = ({
     }
   }, [params]);
 
-  useEffect(() => {
-    setInputValue(current_value);
-  }, [current_value]);
-
   const handleSaveValue = (value: string) => {
-    setParam(value);
+    const newValue = value || "";
+    setParam(newValue);
+    if (notifyGlobalChange) {
+      notifyGlobalChange();
+    }
   };
 
   if (eva?.server_info?.acl?.admin) {
     return (
       <ThemeProvider theme={THEME}>
         <Autocomplete
+          key={element_id}
           fullWidth
           freeSolo
           options={oid_list}
           disableClearable
-          value={inputValue || ""}
+          value={inputValue}
           onInputChange={(_, newInputValue) => {
             setInputValue(newInputValue);
           }}
           onChange={(_, val) => {
-            const newValue = val ? val : inputValue;
+            const newValue = val || "";
+            setInputValue(newValue);
             handleSaveValue(newValue);
+          }}
+          onBlur={() => {
+            handleSaveValue(inputValue.trim() || "");
+          }}
+          onFocus={() => {
+            handleSaveValue(inputValue.trim() || "");
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              handleSaveValue(inputValue);
+              handleSaveValue(inputValue.trim() || "");
               (e.target as HTMLInputElement).blur();
             }
-          }}
-          onFocus={() => {
-            handleSaveValue(inputValue);
-          }}
-          onBlur={() => {
-            handleSaveValue(inputValue);
           }}
           renderInput={(params) => (
             <TextField
@@ -82,25 +92,27 @@ export const EditSelectServerOID = ({
     return (
       <>
         <TextField
+          key={element_id}
           fullWidth
           type="text"
           // size={params?.size}
-          value={inputValue || ""}
+          value={inputValue}
           onChange={(e) => {
-            setInputValue(e.target.value);
+            const { value } = e.target;
+            setInputValue(value || "");
+          }}
+          onBlur={() => {
+            handleSaveValue(inputValue.trim() || "");
+          }}
+          onFocus={() => {
+            handleSaveValue(inputValue.trim() || "");
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              handleSaveValue(inputValue);
+              handleSaveValue(inputValue.trim() || "");
               (e.target as HTMLInputElement).blur();
             }
-          }}
-          onFocus={() => {
-            handleSaveValue(inputValue);
-          }}
-          onBlur={() => {
-            handleSaveValue(inputValue);
           }}
         />
       </>

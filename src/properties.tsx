@@ -36,7 +36,7 @@ export enum PropertyKind {
   OID = "oid",
   OIDSubscribed = "oid_subscribed",
   ValueMap = "value_map",
-  ValueColorMap = "value_color_map"
+  ValueColorMap = "value_color_map",
 }
 
 export const PropertyEditor = ({
@@ -95,7 +95,12 @@ export const PropertyEditor = ({
       editor = <EditSelectDatabase {...props} />;
       break;
     case PropertyKind.SelectServerOID:
-      editor = <EditSelectServerOID {...props} />;
+      editor = (
+        <EditSelectServerOID
+          notifyGlobalChange={notifySubscribedOIDsChanged}
+          {...props}
+        />
+      );
       break;
     case PropertyKind.ValueMap:
       editor = <EditValueMap {...props} />;
